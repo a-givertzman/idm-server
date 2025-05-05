@@ -1,0 +1,4 @@
+server:
+  address: 0.0.0.0:3838
+api:
+  address: 0.0.0.0:3839
