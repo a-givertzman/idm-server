@@ -59,9 +59,13 @@ impl Api {
             }
             Ok(())
         });
+        let error = Error::new(&self.dbg, "run");
         match handle {
-            Ok(_) => todo!(),
-            Err(_) => todo!(),
+            Ok(handle) => {
+                self.handle.push(handle);
+                Ok(())
+            }
+            Err(err) => Err(error.pass(err)),
         }
     }
     ///
