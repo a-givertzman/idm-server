@@ -1,3 +1,5 @@
+use sal_core::error::Error;
+
 use super::server_conf::ServerConf;
 
 pub struct Server {
@@ -12,5 +14,10 @@ impl Server {
         Self {
             
         }
+    }
+    ///
+    /// [Server] Operation mode
+    pub fn run(&self) -> Result<(), Error> {
+        Ok(())
     }
 }

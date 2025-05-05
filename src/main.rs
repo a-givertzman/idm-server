@@ -1,5 +1,6 @@
-mod server;
+mod api;
 mod conf;
+mod server;
 mod types;
 use conf::conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
