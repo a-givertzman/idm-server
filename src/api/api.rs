@@ -1,6 +1,6 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{scheduler::Scheduler, JoinHandle};
+use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
     api::ApiConf,
     server::ServerConf

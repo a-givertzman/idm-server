@@ -5,7 +5,7 @@ mod types;
 use conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
-use sal_sync::thread_pool::tread_pool::ThreadPool;
+use sal_sync::thread_pool::ThreadPool;
 use server::Server;
 
 
