@@ -1,8 +1,8 @@
-use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
-use super::server_conf::ServerConf;
+use crate::server::{ServerConf, Connection};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -11,6 +11,7 @@ pub struct Server {
     dbg: Dbg,
     conf: ServerConf,
     scheduler: Scheduler,
+    connections: Arc<Stack<Connection>>,
     handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
@@ -24,6 +25,7 @@ impl Server {
             dbg: Dbg::new(parent.into(), "Server"),
             conf,
             scheduler,
+            connections: Arc::new(Stack::new()),
             handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -34,6 +36,7 @@ impl Server {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let scheduler = self.scheduler.clone();
+        let connections = self.connections.clone();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             'main: loop {
@@ -42,17 +45,24 @@ impl Server {
                         for stream in listener.incoming() {
                             match stream {
                                 Ok(stream) => {
-                                    scheduler.spawn(move|| {
-                                        
-                                        Ok(())
-                                    });
+                                    let conn = Connection::new(
+                                        &dbg,
+                                        conf.connection.clone(),
+                                        stream,
+                                        scheduler.clone(),
+                                    );
+                                    match conn.run() {
+                                        Ok(_) => connections.push(conn),
+                                        Err(err) => log::warn!("{dbg}.run | Spawn connection error: {:?}", err),
+                                    }
                                 }
-                                Err(_) => todo!(),
+                                Err(err) => log::warn!("{dbg}.run | Get TcpStream error: {:?}", err),
                             }
                         }
                     }
-                    Err(_) => todo!(),
+                    Err(err) => log::warn!("{dbg}.run | Bind TcpServer error: {:?}", err),
                 }
+                std::thread::sleep(Duration::from_secs(1));
                 if exit.load(Ordering::SeqCst) {
                     break 'main;
                 }
@@ -72,6 +82,13 @@ impl Server {
     /// Returns when internal thread's will finished
     pub fn wait(&self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "wait");
+        while !self.connections.is_empty() {
+            if let Some(conn) = self.connections.pop() {
+                if let Err(err) = conn.wait() {
+                    log::warn!("{}.wait | Bind TcpServer error: {:?}", self.dbg, err);
+                }
+            }
+        }
         match self.handle.pop() {
             Some(handle) => handle.join().map_err(|err| error.pass(format!("{:?}", err))),
             None => Err(error.err("No handle")),
@@ -80,6 +97,16 @@ impl Server {
     ///
     /// Sends exit signal to main tread
     pub fn exit(&self) {
+        let mut connections = vec![];
+        while !self.connections.is_empty() {
+            if let Some(conn) = self.connections.pop() {
+                connections.push(conn);
+            }
+        }
+        for conn in connections {
+            conn.exit();
+            self.connections.push(conn);
+        }
         self.exit.store(true, Ordering::SeqCst);
     }
 }

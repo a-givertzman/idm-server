@@ -1,17 +1,17 @@
-use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpListener, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
+use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use api_tools::api::message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, msg_kind::MsgKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
-    server::ServerConnectionConf, types::TcpMessage,
+    server::ConnectionConf, types::TcpMessage,
 };
 
 ///
 /// The [Connection] of the `Server`
 pub struct Connection {
     dbg: Dbg,
-    conf: ServerConnectionConf,
+    conf: ConnectionConf,
     stream: Stack<TcpStream>,
     scheduler: Scheduler,
     handle: Stack<JoinHandle<()>>,
@@ -22,7 +22,7 @@ pub struct Connection {
 impl Connection {
     ///
     /// Returns [Connection] new instance
-    pub fn new(parent: impl Into<String>, conf: ServerConnectionConf, stream: TcpStream, scheduler: Scheduler) -> Self {
+    pub fn new(parent: impl Into<String>, conf: ConnectionConf, stream: TcpStream, scheduler: Scheduler) -> Self {
         let stream_ = Stack::new();
         stream_.push(stream);
         Self {
@@ -105,26 +105,26 @@ impl Connection {
                                     MessageKind::Bytes => {
                                         let bytes = message.build(&bytes, id.0);
                                         if let Err(err) = w_stream.write_all(&bytes) {
-                                            log::warn!("{}.read | TcpStream write error: {:?}", dbg, err);
+                                            log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
                                             if let Err(err) = Self::close(&dbg, stream) {
-                                                log::warn!("{}.read | Close tcp stream error: {:?}", dbg, err);
+                                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                                             }
                                             break 'main;
                                         }
                                     }
-                                    _ => log::warn!("{} | Message of kind '{:?}' - is not supported", dbg, kind),
+                                    _ => log::warn!("{dbg}.run | Message of kind '{:?}' - is not supported", kind),
                                 }
                             }
                             Err(err) => {
-                                log::warn!("{dbg} | parse error: {:?}", err)
+                                log::warn!("{dbg}.run | parse error: {:?}", err)
                             }
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}.read | TcpStream read error: {:?}", dbg, err);
+                        log::warn!("{}.run | TcpStream read error: {:?}", dbg, err);
                         if let IsConnected::Closed(_) = Self::parse_err(&dbg, err) {
                             if let Err(err) = Self::close(&dbg, stream) {
-                                log::warn!("{}.read | Close tcp stream error: {:?}", dbg, err);
+                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                             }
                         }
                         break 'main;
