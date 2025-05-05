@@ -84,6 +84,23 @@ impl Connection {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
                             Ok((id, kind, _, bytes)) => {
+                                // TODO: parsed bytes should be converted into `Requiest` ( bytes -> String -> serde_json::Value )
+                                // parsed incoming json request:
+                                // {
+                                //      cot: Cot::Act,
+                                //      data: null,
+                                //      err: null
+                                // }
+                                //  json reply:
+                                // {
+                                //      cot: Cot: Inf,
+                                //      data: {
+                                //          Device info data
+                                //      },
+                                //      err: {
+                                //          message: "Error message"
+                                //      }
+                                // }
                                 match kind {
                                     MessageKind::Bytes => {
                                         let bytes = message.build(&bytes, id.0);
