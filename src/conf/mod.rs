@@ -1,1 +1,3 @@
-pub mod conf;
+mod conf;
+
+pub use conf::*;
