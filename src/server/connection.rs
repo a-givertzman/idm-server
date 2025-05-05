@@ -2,12 +2,13 @@ use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{scheduler::Scheduler, JoinHandle};
-use super::server_conf::ServerConf;
+use crate::{
+    server::ServerConf,
+};
+
 ///
-/// The Server
-/// - Setups socket server at specified address
-/// - Spawnes `Connection` on each incoming requiest
-pub struct Server {
+/// The [Connection] of the `Server`
+pub struct Connection {
     dbg: Dbg,
     conf: ServerConf,
     scheduler: Scheduler,
@@ -15,13 +16,13 @@ pub struct Server {
     exit: Arc<AtomicBool>,
 }
 //
-//
-impl Server {
+// 
+impl Connection {
     ///
-    /// Returns [Server] new instance
+    /// Returns [Connection] new instance
     pub fn new(parent: impl Into<String>, conf: ServerConf, scheduler: Scheduler) -> Self {
         Self {
-            dbg: Dbg::new(parent.into(), "Server"),
+            dbg: Dbg::new(parent.into(), "Connection"),
             conf,
             scheduler,
             handle: Stack::new(),
@@ -29,7 +30,7 @@ impl Server {
         }
     }
     ///
-    /// [Server] Operation mode
+    /// [Connection] Operation mode
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();

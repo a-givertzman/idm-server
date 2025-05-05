@@ -6,7 +6,10 @@ use crate::{
     server::ServerConf
 };
 use coco::Stack;
-
+///
+/// The ApiServer
+/// - Setups socket server at the specified address
+/// - Spawnes `Connection` on each incoming requiest
 pub struct Api {
     dbg: Dbg,
     conf: ApiConf,
@@ -29,7 +32,7 @@ impl Api {
         }
     }
     ///
-    /// [Server] Operation mode
+    /// [Api] Operation mode
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();
