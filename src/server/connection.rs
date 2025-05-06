@@ -1,11 +1,17 @@
 use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}};
-use api_tools::api::message::{fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn}, message::{MessageField, MessageParse}, message_kind::MessageKind, msg_kind::MsgKind, parse_data::ParseData, parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn};
+use api_tools::api::message::{
+    fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn},
+    message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData,
+    parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn,
+};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
-    server::ConnectionConf, domain::TcpMessage,
+    domain::{Eval, TcpMessage}, server::ConnectionConf,
 };
+
+use super::{BytesCtx, JsonCtx};
 
 ///
 /// The [Connection] of the `Server`
@@ -14,6 +20,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Stack<TcpStream>,
     scheduler: Scheduler,
+    ctx: Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send>,
     handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
@@ -22,7 +29,13 @@ pub struct Connection {
 impl Connection {
     ///
     /// Returns [Connection] new instance
-    pub fn new(parent: impl Into<String>, conf: ConnectionConf, stream: TcpStream, scheduler: Scheduler) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        conf: ConnectionConf,
+        stream: TcpStream,
+        scheduler: Scheduler,
+        ctx: impl Eval<BytesCtx, Result<JsonCtx, Error>> + Send + 'static,
+    ) -> Self {
         let stream_ = Stack::new();
         stream_.push(stream);
         Self {
@@ -30,6 +43,7 @@ impl Connection {
             conf,
             stream: stream_,
             scheduler,
+            ctx: Box::new(ctx),
             handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }

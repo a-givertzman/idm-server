@@ -9,11 +9,13 @@ use serde::{Deserialize, Serialize};
 /// - `RecCon` - Request confirmation, contains reply
 /// - `RecErr` - Request error
 /// - `Inf` - Information message
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
 pub enum Cot {
     Act,
     ActCon,
+    ActErr,
     Req,
     ReqCon,
+    ReqErr,
     Inf,
 }
