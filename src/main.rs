@@ -1,7 +1,7 @@
 mod api;
 mod conf;
 mod server;
-mod types;
+mod domain;
 use conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_core::dbg::Dbg;

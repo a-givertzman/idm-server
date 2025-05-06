@@ -4,7 +4,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
-    server::ConnectionConf, types::TcpMessage,
+    server::ConnectionConf, domain::TcpMessage,
 };
 
 ///
