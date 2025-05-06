@@ -4,7 +4,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::server::{ServerConf, Connection};
 
-use super::{req_dev_info::ReqDevInfo, select_cot::SelectCot, select_req::SelectReq, Cot, Request};
+use super::{select_dev_info::SelectDevInfo, select_cot::SelectCot, select_req::SelectReq, Cot, Request};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -56,7 +56,7 @@ impl Server {
                                             vec![
                                                 (Cot::Req, SelectReq::new(
                                                     vec![
-                                                        (Request::DeviceInfo, ReqDevInfo::new()),
+                                                        (Request::DeviceInfo, SelectDevInfo::new()),
                                                     ]
                                                 )),
                                             ],

@@ -1,17 +1,17 @@
 use sal_core::error::Error;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use crate::{device_info::DeviceInfo, domain::Eval};
 use super::{JsonCtx, MapCtx};
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub(crate) struct ReqDevInfo {
+pub(crate) struct SelectDevInfo {
     
 }
 //
 //
-impl ReqDevInfo {
+impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
     pub fn new() -> Self {
@@ -21,7 +21,7 @@ impl ReqDevInfo {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for ReqDevInfo {
+impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
     fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
         let error = Error::new("ReqDevInfo", "eval");
         match input.map.get("data") {
@@ -49,7 +49,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for ReqDevInfo {
 }
 //
 //
-unsafe impl Send for ReqDevInfo {}
+unsafe impl Send for SelectDevInfo {}
 ///
 /// Request for `DeviceInfo`
 #[derive(Debug, Deserialize)]
