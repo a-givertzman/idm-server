@@ -2,6 +2,7 @@ mod api;
 mod conf;
 mod server;
 mod domain;
+mod device_info;
 use conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_core::dbg::Dbg;

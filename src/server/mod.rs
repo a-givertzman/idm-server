@@ -8,13 +8,15 @@ mod context;
 mod req_dev_info;
 mod select_cot;
 mod select_req;
-mod req;
+mod request;
+mod reply;
 
 use context::*;
 use req_dev_info::*;
 use select_cot::*;
 use select_req::*;
-use req::*;
+use request::*;
+use reply::*;
 
 pub use connection_conf::*;
 pub use connection::*;

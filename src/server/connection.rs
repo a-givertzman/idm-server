@@ -11,7 +11,7 @@ use crate::{
     domain::{Eval, TcpMessage}, server::ConnectionConf,
 };
 
-use super::{BytesCtx, JsonCtx};
+use super::{BytesCtx, JsonCtx, Reply};
 
 ///
 /// The [Connection] of the `Server`
@@ -20,7 +20,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Stack<TcpStream>,
     scheduler: Scheduler,
-    ctx: Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send>,
+    ctx: Stack<Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send>>,
     handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
 }
@@ -38,12 +38,14 @@ impl Connection {
     ) -> Self {
         let stream_ = Stack::new();
         stream_.push(stream);
+        let ctx_: Stack<Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send + 'static>> = Stack::new();
+        ctx_.push(Box::new(ctx));
         Self {
             dbg: Dbg::new(parent.into(), "Connection"),
             conf,
             stream: stream_,
             scheduler,
-            ctx: Box::new(ctx),
+            ctx: ctx_,
             handle: Stack::new(),
             exit: Arc::new(AtomicBool::new(false)),
         }
@@ -87,10 +89,12 @@ impl Connection {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let stream = self.stream.pop().unwrap();
+        let mut ctx = self.ctx.pop().unwrap();
         let mut w_stream = BufWriter::new(stream.try_clone().unwrap());
         let mut r_stream = BufReader::new(stream.try_clone().unwrap());
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
+            let error = Error::new("Connection", "run");
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
             'main: loop {
@@ -117,13 +121,34 @@ impl Connection {
                                 // }
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let bytes = message.build(&bytes, id.0);
-                                        if let Err(err) = w_stream.write_all(&bytes) {
-                                            log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
-                                            if let Err(err) = Self::close(&dbg, stream) {
-                                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                                        let reply = match ctx.eval(BytesCtx { bytes, id: id.0 }) {
+                                            Ok(reply) => Reply {
+                                                id: reply.id,
+                                                data: reply.value,
+                                                error: None,
+                                            },
+                                            Err(err) => Reply {
+                                                id: id.0,
+                                                data: serde_json::Value::Null,
+                                                error: Some(super::ReplyError {
+                                                    message: error.pass(err).to_string()
+                                                }),
                                             }
-                                            break 'main;
+                                        };
+                                        match serde_json::to_vec(&reply) {
+                                            Ok(bytes) => {
+                                                let bytes = message.build(&bytes, id.0);
+                                                if let Err(err) = w_stream.write_all(&bytes) {
+                                                    log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
+                                                    if let Err(err) = Self::close(&dbg, stream) {
+                                                        log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                                                    }
+                                                    break 'main;
+                                                }
+                                            }
+                                            Err(err) => {
+                                                log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                            }
                                         }
                                     }
                                     _ => log::warn!("{dbg}.run | Message of kind '{:?}' - is not supported", kind),

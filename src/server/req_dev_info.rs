@@ -1,6 +1,6 @@
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::domain::Eval;
+use crate::{device_info::DeviceInfo, domain::Eval};
 use super::{JsonCtx, MapCtx};
 ///
 /// Matching incoming messages by it's Cot::Req name
@@ -29,7 +29,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for ReqDevInfo {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
                         let req: DeviceInfoRequest = data;
-                        let reply = DeviceInfoReply {
+                        let reply = DeviceInfo {
                             id: req.id,
                             name: "Device Name".to_owned(),
                             model: "Device Model".to_owned(),
@@ -55,13 +55,4 @@ unsafe impl Send for ReqDevInfo {}
 #[derive(Debug, Deserialize)]
 struct DeviceInfoRequest {
     pub id: usize,
-}
-///
-/// Reply to `DeviceInfo` request
-#[derive(Debug, Serialize)]
-struct DeviceInfoReply {
-    pub id: usize,
-    pub name: String,
-    pub model: String,
-    pub serial: String,
 }
