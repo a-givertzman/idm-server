@@ -44,19 +44,19 @@ impl Eval<BytesCtx, Result<JsonCtx, Error>> for SelectCot {
                                             Some(eval) => {
                                                 eval.eval(MapCtx { map: map.to_owned(), id: input.id })
                                             },
-                                            None => todo!(),
+                                            None => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                         }
                                     }
-                                    Err(_) => todo!(),
+                                    Err(err) => Err(error.pass_with(format!("Cot can't be parsed {:#?}", cot), err.to_string())),
                                 }
                             }
-                            None => todo!(),
+                            None => Err(error.err(format!("Field 'cot' missed in the request {:#?}", map))),
                         }
                     }
-                    None => todo!(),
+                    None => Err(error.err(format!("Wrong request format, map expected, but found {:#?}", value))),
                 }
             }
-            Err(_) => todo!(),
+            Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", cot), err.to_string())),
         }
     }
 }
