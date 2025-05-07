@@ -7,7 +7,7 @@ mod select_cot {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::Eval, server::{Cot, JsonCtx, MapCtx, SelectCot, SelectReq}};
+    use crate::{device_info::DevId, domain::Eval, server::{BytesCtx, Cot, JsonCtx, MapCtx, SelectCot, SelectReq}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -91,9 +91,10 @@ mod select_cot {
             ]))),
         ]);
         for (step, req, target) in test_data {
-            let val = MapCtx {
+            let bytes = serde_json::to_vec(&req).unwrap();
+            let val = BytesCtx {
                 id: DevId(step),
-                map: json!(req).as_object().unwrap().to_owned(),
+                bytes,
             };
             let result = select_req.eval(val);
             match (result, target) {
