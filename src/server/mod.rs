@@ -12,7 +12,7 @@ mod request;
 mod reply;
 
 use context::*;
-use select_dev_info::*;
+pub(crate) use select_dev_info::*;
 use select_cot::*;
 use select_req::*;
 use request::*;

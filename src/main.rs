@@ -3,12 +3,13 @@ mod conf;
 mod server;
 mod domain;
 mod device_info;
+#[cfg(test)]
+mod test;
 use conf::Conf;
 use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use server::Server;
-
 
 ///
 /// Application entry point
