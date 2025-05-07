@@ -1,13 +1,13 @@
 #[cfg(test)]
 
-mod select_req {
+mod select_cot {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::Eval, server::{JsonCtx, MapCtx, SelectReq}};
+    use crate::{device_info::DevId, domain::Eval, server::{Cot, JsonCtx, MapCtx, SelectCot, SelectReq}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -29,7 +29,7 @@ mod select_req {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
-        let dbg = Dbg::own("select_req.eval");
+        let dbg = Dbg::own("select_cot.eval");
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
@@ -65,28 +65,30 @@ mod select_req {
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
-        let mut select_req = SelectReq::new(vec![
-            (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
-                if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
-                }
-                let reply = request.replace("Request1", "Reply1");
-                Ok(reply)
-            }))),
-            (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
-                if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
-                }
-                let reply = request.replace("Request2", "Reply2");
-                Ok(reply)
-            }))),
-            (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
-                if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
-                }
-                let reply = request.replace("Request3", "Reply3");
-                Ok(reply)
-            }))),
+        let mut select_req = SelectCot::new(vec![
+            (Cot::Req, Box::new(SelectReq::new(vec![
+                (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectReq2", "").err(request));
+                    }
+                    let reply = request.replace("Request1", "Reply1");
+                    Ok(reply)
+                }))),
+                (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectReq2", "").err(request));
+                    }
+                    let reply = request.replace("Request2", "Reply2");
+                    Ok(reply)
+                }))),
+                (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectReq2", "").err(request));
+                    }
+                    let reply = request.replace("Request3", "Reply3");
+                    Ok(reply)
+                }))),
+            ]))),
         ]);
         for (step, req, target) in test_data {
             let val = MapCtx {
