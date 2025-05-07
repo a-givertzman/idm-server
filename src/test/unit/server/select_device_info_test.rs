@@ -37,22 +37,61 @@ mod class_name {
             (
                 01,
                 111,
-                DeviceInfo::new(todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!()),
+                DeviceInfo::new(
+                    01,
+                    "MAN01".into(),
+                    "VEN01".into(),
+                    "OC01".into(),
+                    "MOD01".into(),
+                    "SER01".into(),
+                    "NAM01".into(),
+                    "DESC01".into(),
+                    "W01".into(),
+                    "H01".into(),
+                    "DEP01".into(),
+                    "WEI01".into()
+                ),
             ),
             (
                 02,
                 222,
-                DeviceInfo::new(todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!()),
+                DeviceInfo::new(
+                    01,
+                    "MAN02".into(),
+                    "VEN02".into(),
+                    "OC02".into(),
+                    "MOD02".into(),
+                    "SER02".into(),
+                    "NAM02".into(),
+                    "DESC02".into(),
+                    "W02".into(),
+                    "H02".into(),
+                    "DEP02".into(),
+                    "WEI02".into()
+                ),
             ),
             (
                 03,
                 333,
-                DeviceInfo::new(todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!(), todo!()),
+                DeviceInfo::new(
+                    01,
+                    "MAN03".into(),
+                    "VEN03".into(),
+                    "OC03".into(),
+                    "MOD03".into(),
+                    "SER03".into(),
+                    "NAM03".into(),
+                    "DESC03".into(),
+                    "W03".into(),
+                    "H03".into(),
+                    "DEP03".into(),
+                    "WEI03".into()
+                ),
             ),
         ];
-        let select_dev_info = SelectDevInfo::new(
+        let mut select_dev_info = SelectDevInfo::new(
             FakeDeviceInfo::new(
-                test_data.map(|(_, id, val)| (id, val)).into(),
+                test_data.clone().map(|(_, id, val)| (id, val)).into(),
             )
         );
         for (step, id, target) in test_data {
