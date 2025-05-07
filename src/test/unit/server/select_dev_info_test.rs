@@ -1,9 +1,10 @@
 #[cfg(test)]
 
-mod class_name {
-    use std::{sync::Once, time::{Duration, Instant}};
+mod select_dev_info {
+    use std::{sync::Once, time::Duration};
     use indexmap::IndexMap;
     use sal_core::{dbg::Dbg, error::Error};
+    use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
@@ -29,7 +30,7 @@ mod class_name {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
-        let dbg = Dbg::own("class_name_method");
+        let dbg = Dbg::own("select_dev_info.eval");
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
@@ -95,7 +96,7 @@ mod class_name {
             )
         );
         for (step, id, target) in test_data {
-            let req = DeviceInfoRequest { id };
+            let req = FakeRequest { data: DeviceInfoRequest { id } };
             let val = MapCtx {
                 id: DevId(id),
                 map: json!(req).as_object().unwrap().to_owned(),
@@ -129,5 +130,11 @@ mod class_name {
                 None => Err(error.err(format!("id {} - is not found in the test_data", id.0))),
             }
         }
+    }
+    ///
+    /// Fake Request
+    #[derive(Debug, Serialize, Deserialize)]
+    struct FakeRequest {
+        data: DeviceInfoRequest
     }
 }

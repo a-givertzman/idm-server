@@ -98,6 +98,7 @@ impl DeviceInfo {
     ///
     /// Returns [DeviceInfo] read from path 
     fn read<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let error = Error::new("DeviceInfo", "read");
         let file = OpenOptions::new()
             .read(true)
             .open(path);
@@ -108,10 +109,10 @@ impl DeviceInfo {
                         let result: Self = value;
                         Ok(result)
                     }
-                    Err(_) => todo!(),
+                    Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            Err(_) => todo!(),
+            Err(err) => Err(error.pass(err.to_string())),
         }
     }
 }
