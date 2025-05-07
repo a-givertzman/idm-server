@@ -27,7 +27,7 @@ pub struct DevId(pub u32);
 pub struct DeviceInfo {
     #[serde(skip)]
     path: PathBuf,
-    pub id: usize,
+    pub id: u32,
     pub manufacturer: String,
     pub vendor: String,
     #[serde(rename="order-code")]
@@ -47,7 +47,7 @@ impl DeviceInfo {
     ///
     /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
     pub fn new(
-        id: usize,
+        id: u32,
         manufacturer: String,
         vendor: String,
         order_code: String,
