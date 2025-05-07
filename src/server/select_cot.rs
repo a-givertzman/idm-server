@@ -29,6 +29,7 @@ impl SelectCot {
 //
 impl Eval<BytesCtx, Result<JsonCtx, Error>> for SelectCot {
     fn eval(&mut self, input: BytesCtx) -> Result<JsonCtx, Error> {
+        let error = Error::new("SelectCot", "eval");
         match serde_json::from_slice(&input.bytes) {
             Ok(value) => {
                 let value: serde_json::Value = value;

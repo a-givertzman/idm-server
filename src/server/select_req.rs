@@ -28,6 +28,7 @@ impl SelectReq {
 //
 impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectReq {
     fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+        let error = Error::new("SelectReq", "eval");
         match input.map.get("req") {
             Some(req) => {
                 match serde_json::from_value(req.to_owned()) {
@@ -37,13 +38,13 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectReq {
                             Some(eval) => {
                                 eval.eval(input)
                             },
-                            None => todo!(),
+                            None => Err(error.err(format!("Request {:?} - is not supported", req))),
                         }
                     }
-                    Err(_) => todo!(),
+                    Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", req), err.to_string())),
                 }
             }
-            None => todo!(),
+            None => Err(error.err(format!("Field 'req' missed in the request {:#?}", input.map))),
         }
     }
 }
