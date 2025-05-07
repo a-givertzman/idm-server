@@ -36,17 +36,17 @@ mod select_req {
         let test_data = [
             (
                 01,
-                FakeRequest { req: Request::Req1, data: ReqData("Request 01".into()) },
+                FakeRequest { req: Request::Req1, data: ReqData("Request1 01".into()) },
                 Ok("Reply1 01"),
             ),
             (
                 02,
-                FakeRequest { req: Request::Req2, data: ReqData("Request 02".into()) },
+                FakeRequest { req: Request::Req2, data: ReqData("Request2 02".into()) },
                 Ok("Reply2 02"),
             ),
             (
                 03,
-                FakeRequest { req: Request::Req3, data: ReqData("Request 03".into()) },
+                FakeRequest { req: Request::Req3, data: ReqData("Request3 03".into()) },
                 Ok("Reply3 03"),
             ),
             (
@@ -71,21 +71,21 @@ mod select_req {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request", "Reply1");
+                    let reply = request.replace("Request1", "Reply1");
                     Ok(reply)
                 }))),
                 (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request", "Reply2");
+                    let reply = request.replace("Request2", "Reply2");
                     Ok(reply)
                 }))),
                 (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request", "Reply3");
+                    let reply = request.replace("Request3", "Reply3");
                     Ok(reply)
                 }))),
             ]
