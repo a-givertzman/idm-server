@@ -14,7 +14,7 @@ pub struct Conf {
 //
 impl Conf {
     ///
-    /// Returns [Cong] new instance loaded from yaml
+    /// Returns [Conf] new instance loaded from yaml
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let error = Error::new("Conf", "load");
         let file = OpenOptions::new()
