@@ -10,12 +10,12 @@ pub enum Request {
 ///
 /// Request for `DeviceInfo`
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DeviceInfoRequest {
+pub struct DeviceInfoRequest {
     pub id: u32,
 }
 ///
 /// Request for `DeviceInfo`
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DeviceDocRequest {
+pub struct DeviceDocRequest {
     pub id: u32,
 }

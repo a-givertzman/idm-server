@@ -1,14 +1,12 @@
 #[cfg(test)]
 
 mod device_info {
-    use std::{sync::Once, time::{Duration, Instant}};
-    use indexmap::IndexMap;
-    use sal_core::{dbg::Dbg, error::Error};
+    use std::{sync::Once, time::Duration};
+    use sal_core::dbg::Dbg;
     use serde::{Deserialize, Serialize};
-    use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::Eval, server::{DeviceInfoRequest, JsonCtx, MapCtx, SelectDevInfo}};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::Eval, server::DeviceInfoRequest};
     ///
     ///
     static INIT: Once = Once::new();

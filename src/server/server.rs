@@ -54,17 +54,17 @@ impl Server {
                                         scheduler.clone(),
                                         SelectCot::new(
                                             vec![
-                                                (Cot::Req, SelectReq::new(
+                                                (Cot::Req, Box::new(SelectReq::new(
                                                     vec![
-                                                        (Request::DeviceInfo, select(SelectDevInfo::new(
+                                                        (Request::DeviceInfo, Box::new(SelectDevInfo::new(
                                                             DeviceInfo::from_path(
                                                                 "assets/info/"
                                                             ),
                                                         ))),
-                                                        (Request::DeviceDoc, select(SelectDevDoc::new(
+                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new(
                                                         ))),
                                                     ]
-                                                )),
+                                                ))),
                                             ],
                                         ),
                                     );

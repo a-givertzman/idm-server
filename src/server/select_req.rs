@@ -14,12 +14,12 @@ pub struct SelectReq {
 impl SelectReq {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(select: Vec<(Request, impl Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static)>) -> Self {
+    pub fn new(select: Vec<(Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
         Self {
-            select: IndexMap::from_iter(
-                select.into_iter().map(|(cot, eval)| -> (Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>) {
-                    (cot, Box::new(eval))
-                })
+            select: IndexMap::from_iter(select
+                // select.into_iter().map(|(cot, eval)| -> (Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>) {
+                //     (cot, Box::new(eval))
+                // })
             ),
         }
     }

@@ -17,7 +17,7 @@ pub(crate) use select_dev_doc::*;
 pub(crate) use select_dev_info::*;
 use select_cot::*;
 pub(crate) use select_req::*;
-use request::*;
+pub(crate) use request::*;
 use reply::*;
 
 pub use connection_conf::*;
