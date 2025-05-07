@@ -56,7 +56,17 @@ impl Eval<BytesCtx, Result<JsonCtx, Error>> for SelectCot {
                     None => Err(error.err(format!("Wrong request format, map expected, but found {:#?}", value))),
                 }
             }
-            Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", cot), err.to_string())),
+            Err(err) => {
+                match std::str::from_utf8(&input.bytes) {
+                    Ok(req) => Err(error.pass_with(format!("Request can't be parsed from {:#?}", req), err.to_string())),
+                    Err(err) => Err(
+                        error.pass_with(
+                            format!("Request can't be parsed from bytes wich can't be converted into string, bytes:\n\t{:?}", input.bytes),
+                            err.to_string(),
+                        ),
+                    )
+                }
+            }
         }
     }
 }
