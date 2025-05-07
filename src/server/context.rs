@@ -9,6 +9,7 @@ pub struct BytesCtx {
 }
 ///
 /// Contains message's `id` & `serde_json::Value`
+#[derive(Debug, PartialEq)]
 pub struct JsonCtx {
     pub id: DevId,
     pub value: serde_json::Value,

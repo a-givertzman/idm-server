@@ -5,6 +5,7 @@ use serde_json::json;
 use crate::{domain::Eval, server::JsonCtx};
 ///
 /// Wrapper for the [DeviceInfo] id of type u32
+#[derive(Debug, PartialEq)]
 pub struct DevId(pub u32);
 ///
 /// Reply to `DeviceInfo` request

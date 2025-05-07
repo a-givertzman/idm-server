@@ -1,20 +1,22 @@
+use std::fmt::Debug;
+
 use indexmap::IndexMap;
 use sal_core::error::Error;
 use crate::domain::Eval;
-use super::{JsonCtx, MapCtx, Request};
+use super::{JsonCtx, MapCtx};
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub struct SelectReq {
-    select: IndexMap<Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send>>,
+pub struct SelectReq<R> {
+    select: IndexMap<R, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send>>,
 }
 //
 //
-impl SelectReq {
+impl<R: std::hash::Hash + std::cmp::Eq> SelectReq<R> {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(select: Vec<(Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(R, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select
                 // select.into_iter().map(|(cot, eval)| -> (Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>) {
@@ -26,14 +28,14 @@ impl SelectReq {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectReq {
+impl<R: std::hash::Hash + std::cmp::Eq + serde::de::DeserializeOwned + Debug> Eval<MapCtx, Result<JsonCtx, Error>> for SelectReq<R> {
     fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
         let error = Error::new("SelectReq", "eval");
         match input.map.get("req") {
             Some(req) => {
                 match serde_json::from_value(req.to_owned()) {
                     Ok(req) => {
-                        let req: Request = req;
+                        let req: R = req;
                         match self.select.get_mut(&req) {
                             Some(eval) => {
                                 eval.eval(input)
@@ -50,4 +52,4 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectReq {
 }
 //
 //
-unsafe impl Send for SelectReq {}
+unsafe impl<R> Send for SelectReq<R> {}
