@@ -25,7 +25,7 @@ mod select_cot {
     ///
     /// Testing such functionality / behavior
     #[test]
-    fn methos() {
+    fn eval() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
@@ -36,32 +36,32 @@ mod select_cot {
         let test_data = [
             (
                 01,
-                FakeRequest { req: Request::Req1, data: ReqData("Request1 01".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Request1 01".into()) },
                 Ok("Reply1 01"),
             ),
             (
                 02,
-                FakeRequest { req: Request::Req2, data: ReqData("Request2 02".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Request2 02".into()) },
                 Ok("Reply2 02"),
             ),
             (
                 03,
-                FakeRequest { req: Request::Req3, data: ReqData("Request3 03".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req3, data: ReqData("Request3 03".into()) },
                 Ok("Reply3 03"),
             ),
             (
                 04,
-                FakeRequest { req: Request::Req1, data: ReqData("Error 04".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Error 04".into()) },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                FakeRequest { req: Request::Req2, data: ReqData("Error 05".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 05".into()) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                FakeRequest { req: Request::Req2, data: ReqData("Error 06".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 06".into()) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
@@ -118,6 +118,7 @@ mod select_cot {
     /// Fake Request
     #[derive(Debug, Serialize, Deserialize)]
     struct FakeRequest {
+        cot: Cot,
         req: Request,
         data: ReqData
     }

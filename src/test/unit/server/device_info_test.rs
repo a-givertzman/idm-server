@@ -24,7 +24,7 @@ mod device_info {
     ///
     /// Testing such functionality / behavior
     #[test]
-    fn methos() {
+    fn eval() {
         DebugSession::init(LogLevel::Debug, Backtrace::Short);
         init_once();
         init_each();
