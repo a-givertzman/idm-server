@@ -6,7 +6,7 @@ use super::{JsonCtx, MapCtx, Request};
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub(crate) struct SelectReq {
+pub struct SelectReq {
     select: IndexMap<Request, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send>>,
 }
 //

@@ -1,20 +1,21 @@
 use api_tools::api::message::message::Bytes;
+use crate::device_info::DevId;
 
 ///
 /// Contains message's `id` & `bytes`
-pub(super) struct BytesCtx {
-    pub id: u32,
+pub struct BytesCtx {
+    pub id: DevId,
     pub bytes: Bytes,
 }
 ///
 /// Contains message's `id` & `serde_json::Value`
-pub(super) struct JsonCtx {
-    pub id: u32,
+pub struct JsonCtx {
+    pub id: DevId,
     pub value: serde_json::Value,
 }
 ///
 /// Contains message's `id` & `Map<String, serde_json::Value>`
-pub(super) struct MapCtx {
-    pub id: u32,
+pub struct MapCtx {
+    pub id: DevId,
     pub map: serde_json::Map<String, serde_json::Value>,
 }

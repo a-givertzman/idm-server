@@ -1,21 +1,22 @@
 use sal_core::error::Error;
-use serde::Deserialize;
-use crate::{device_info::DeviceInfo, domain::Eval};
+use serde::{Deserialize, Serialize};
+use crate::{device_info::DevId, domain::Eval};
 use super::{JsonCtx, MapCtx};
 ///
-/// Matching incoming messages by it's Cot::Req name
-/// - Forwarding matched messages to the associated handlers
-/// - Returns bytes and id of messages to be sent over TCP
+/// Extracting incoming messages as [DeviceInfoRequest]
+/// - Forwarding requested id to the specified `ctx`
+/// - Returns [DeviceInfo]
 pub(crate) struct SelectDevInfo {
-    
+    ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
 }
 //
 //
 impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
-    pub fn new() -> Self {
+    pub fn new(ctx: impl Eval<DevId, Result<JsonCtx, Error>> + Send + 'static) -> Self {
         Self {
+            ctx: Box::new(ctx),
         }
     }
 }
@@ -23,20 +24,14 @@ impl SelectDevInfo {
 //
 impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
     fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
-        let error = Error::new("ReqDevInfo", "eval");
+        let error = Error::new("SelectDevInfo", "eval");
         match input.map.get("data") {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
                         let req: DeviceInfoRequest = data;
-                        let reply = DeviceInfo {
-                            id: req.id,
-                            name: "Device Name".to_owned(),
-                            model: "Device Model".to_owned(),
-                            serial: "Device Serial".to_owned(),
-                        };
-                        match serde_json::to_value(reply) {
-                            Ok(value) => Ok(JsonCtx { value, id: input.id }),
+                        match self.ctx.eval(DevId(req.id)) {
+                            Ok(value) => Ok(value),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
@@ -52,7 +47,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
 unsafe impl Send for SelectDevInfo {}
 ///
 /// Request for `DeviceInfo`
-#[derive(Debug, Deserialize)]
-struct DeviceInfoRequest {
-    pub id: usize,
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct DeviceInfoRequest {
+    pub id: u32,
 }

@@ -2,7 +2,7 @@ use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::D
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
-use crate::server::{ServerConf, Connection};
+use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
 
 use super::{select_dev_info::SelectDevInfo, select_cot::SelectCot, select_req::SelectReq, Cot, Request};
 ///
@@ -56,7 +56,11 @@ impl Server {
                                             vec![
                                                 (Cot::Req, SelectReq::new(
                                                     vec![
-                                                        (Request::DeviceInfo, SelectDevInfo::new()),
+                                                        (Request::DeviceInfo, SelectDevInfo::new(
+                                                            DeviceInfo::from_path(
+                                                                "assets/info/"
+                                                            ),
+                                                        )),
                                                     ]
                                                 )),
                                             ],
