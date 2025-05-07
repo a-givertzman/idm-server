@@ -43,6 +43,7 @@ impl Server {
             'main: loop {
                 match TcpListener::bind(conf.address.clone()) {
                     Ok(listener) => {
+                        // TODO: Handle exit
                         for stream in listener.incoming() {
                             match stream {
                                 Ok(stream) => {
