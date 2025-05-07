@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 ///
 /// List of API requiests
@@ -6,4 +6,16 @@ use serde::Deserialize;
 pub enum Request {
     DeviceInfo,
     DeviceDoc,
+}
+///
+/// Request for `DeviceInfo`
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct DeviceInfoRequest {
+    pub id: u32,
+}
+///
+/// Request for `DeviceInfo`
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct DeviceDocRequest {
+    pub id: u32,
 }

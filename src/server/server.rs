@@ -4,7 +4,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
 
-use super::{select_dev_info::SelectDevInfo, select_cot::SelectCot, select_req::SelectReq, Cot, Request};
+use super::{select_cot::SelectCot, select_dev_info::SelectDevInfo, select_req::SelectReq, Cot, Request, SelectDevDoc};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -60,6 +60,8 @@ impl Server {
                                                             DeviceInfo::from_path(
                                                                 "assets/info/"
                                                             ),
+                                                        )),
+                                                        (Request::DeviceDoc, SelectDevDoc::new(
                                                         )),
                                                     ]
                                                 )),

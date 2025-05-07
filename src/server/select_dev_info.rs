@@ -1,7 +1,6 @@
 use sal_core::error::Error;
-use serde::{Deserialize, Serialize};
 use crate::{device_info::DevId, domain::Eval};
-use super::{JsonCtx, MapCtx};
+use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
 /// - Forwarding requested id to the specified `ctx`
@@ -45,9 +44,3 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
 //
 //
 unsafe impl Send for SelectDevInfo {}
-///
-/// Request for `DeviceInfo`
-#[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DeviceInfoRequest {
-    pub id: u32,
-}
