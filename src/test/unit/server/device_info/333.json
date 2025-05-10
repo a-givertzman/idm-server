@@ -1,0 +1,14 @@
+{
+    "id": 333,
+    "manufacturer": "MAN03",
+    "vendor": "VEN03",
+    "order-code": "OC03",
+    "model": "MOD03",
+    "serial": "SER03",
+    "name": "NAM03",
+    "description": "DESC03",
+    "width": "W03",
+    "height": "H03",
+    "depth": "DEP03",
+    "weight": "WEI03"
+}

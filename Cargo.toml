@@ -4,3 +4,21 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+log = "^0.4"
+env_logger = "^0.11"
+#
+#
+sal-core = { git = "https://github.com/a-givertzman/rust-sal-core.git", tag = "0.0.3" }
+sal-sync = { git = "https://github.com/a-givertzman/rust-sal-sync.git", tag = "0.2.0" }
+api-tools = { git = "https://github.com/a-givertzman/rust-api-tools.git", tag = "0.2.1" }
+debugging = { git = "https://github.com/a-givertzman/rust-debuging.git", tag = "0.0.1" }
+testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
+#
+# Serde
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+serde_yaml = "^0.9"
+#
+# Collections
+coco = "^0.3"
+indexmap = "^2.8"
