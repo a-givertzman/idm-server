@@ -9,7 +9,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
     device_info::DevId,
-    domain::{Eval, Hub, TcpMessage}, server::ConnectionConf
+    domain::{Eval, Hub, Link, TcpMessage}, server::ConnectionConf
 };
 use super::{BytesCtx, Event, JsonCtx, Reply};
 
@@ -20,7 +20,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Stack<TcpStream>,
     scheduler: Scheduler,
-    ctx: Stack<Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send>>,
+    ctx: Stack<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send>>,
     handle: Stack<JoinHandle<()>>,
     exit: Arc<AtomicBool>,
     hub_exit: Arc<AtomicBool>,
@@ -35,11 +35,11 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl Eval<BytesCtx, Result<JsonCtx, Error>> + Send + 'static,
+        ctx: impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static,
     ) -> Self {
         let stream_ = Stack::new();
         stream_.push(stream);
-        let ctx_: Stack<Box<dyn Eval<BytesCtx, Result<JsonCtx, Error>> + Send + 'static>> = Stack::new();
+        let ctx_: Stack<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static>> = Stack::new();
         ctx_.push(Box::new(ctx));
         Self {
             dbg: Dbg::new(parent.into(), "Connection"),
@@ -120,7 +120,7 @@ impl Connection {
                             Ok((id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval(BytesCtx { bytes, id: DevId(id.0) }) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub.link()))) {
                                             Ok(reply) => Reply {
                                                 id: reply.id.0,
                                                 data: reply.value,

@@ -14,6 +14,11 @@ pub struct JsonCtx {
     pub id: DevId,
     pub value: serde_json::Value,
 }
+impl JsonCtx {
+    pub fn empty() -> Self {
+        Self { id: DevId(0), value: serde_json::Value::Null }
+    }
+}
 ///
 /// Contains message's `id` & `Map<String, serde_json::Value>`
 pub struct MapCtx {

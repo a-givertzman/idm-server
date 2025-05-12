@@ -3,7 +3,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{device_info::DeviceInfo, domain::Eval, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_dev_info::SelectDevInfo, select_req::SelectReq, Cot, JsonCtx, MapCtx, Request, SelectDevDoc};
+use super::{select_cot::SelectCot, select_dev_info::SelectDevInfo, select_req::SelectReq, Command, Cot, JsonCtx, MapCtx, Request, SelectAct, SelectDevDoc, SelectDevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -55,17 +55,26 @@ impl Server {
                                         conf.connection.clone(),
                                         stream,
                                         scheduler.clone(),
+                                        //
+                                        // Handling incomong messages by Cot
                                         SelectCot::new(
                                             vec![
+                                                // Handling incomong messages with `Cot::Act` by field `cmd`
+                                                (Cot::Act, Box::new(SelectAct::new(
+                                                    vec![
+                                                        // Handling incomong command `DeviceStream`
+                                                        (Command::DeviceStream, Box::new(SelectDevStream::new())),
+                                                    ]
+                                                ))),
+                                                // Handling incomong messages with Cot::Req by field `req`
                                                 (Cot::Req, Box::new(SelectReq::new(
                                                     vec![
+                                                        // Handling incomong request `DeviceInfo`
                                                         (Request::DeviceInfo, Box::new(SelectDevInfo::new(
-                                                            DeviceInfo::from_path(
-                                                                "assets/info/"
-                                                            ),
+                                                            DeviceInfo::from_path("assets/info/"),
                                                         ))),
-                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new(
-                                                        ))),
+                                                        // Handling incomong request `DeviceDoc`
+                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new())),
                                                     ]
                                                 ))),
                                             ],

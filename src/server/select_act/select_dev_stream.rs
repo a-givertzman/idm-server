@@ -1,18 +1,13 @@
 use sal_core::error::Error;
-use crate::{device_info::DevId, domain::Eval};
-use super::{request::DeviceDocRequest, JsonCtx, MapCtx};
-///
-/// Extracting incoming messages as [DeviceDocRequest]
-/// - Forwarding requested id to the specified `ctx`
-/// - Returns [DeviceDoc]
-pub(crate) struct SelectDevDoc {
-    // ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
-}
+
+use crate::{domain::{Eval, Link}, server::MapCtx};
+
+pub struct SelectDevStream {}
 //
 //
-impl SelectDevDoc {
+impl SelectDevStream {
     ///
-    /// Returns [SelectDevDoc] new instance
+    /// Returns [SelectDevStream] new instance
     pub fn new(
         // ctx: impl Eval<DevId, Result<JsonCtx, Error>> + Send + 'static
     ) -> Self {
@@ -23,14 +18,14 @@ impl SelectDevDoc {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevDoc {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for SelectDevStream {
+    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
         let error = Error::new("SelectDevDoc", "eval");
         match input.map.get("data") {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: DeviceDocRequest = data;
+                        let req: String = data;
                         // match self.ctx.eval(DevId(req.id)) {
                         //     Ok(value) => Ok(value),
                         //     Err(err) => Err(error.pass(err.to_string())),
@@ -46,4 +41,4 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevDoc {
 }
 //
 //
-unsafe impl Send for SelectDevDoc {}
+unsafe impl Send for SelectDevStream {}
