@@ -1,6 +1,7 @@
 mod connection_conf;
 mod connection;
 mod cot;
+mod event;
 mod server_conf;
 mod server;
 
@@ -22,6 +23,7 @@ use reply::*;
 
 pub use connection_conf::*;
 pub use connection::*;
+pub(crate) use event::*;
 pub use cot::*;
 pub use server_conf::*;
 pub use server::*;
