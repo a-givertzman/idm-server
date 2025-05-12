@@ -18,7 +18,13 @@ testing = { git = "https://github.com/a-givertzman/rust-testing.git" }
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "^1.0"
 serde_yaml = "^0.9"
+bincode = "^2.0"
 #
 # Collections
-coco = "^0.3"
 indexmap = "^2.8"
+#
+# Thread safe
+kanal = "^0.1"
+coco = "^0.3"
+papaya = "^0.2"
+

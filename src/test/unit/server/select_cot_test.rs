@@ -96,7 +96,7 @@ mod select_cot {
                 id: DevId(step),
                 bytes,
             };
-            let result = select_req.eval(val);
+            let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
                     let target = JsonCtx { id: DevId(step), value: json!(target) };

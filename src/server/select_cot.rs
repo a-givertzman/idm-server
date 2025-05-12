@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use sal_core::error::Error;
-use crate::domain::Eval;
+use crate::domain::{Eval, Link};
 
 use super::{BytesCtx, Cot, JsonCtx, MapCtx};
 ///
@@ -8,14 +8,14 @@ use super::{BytesCtx, Cot, JsonCtx, MapCtx};
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
 pub(crate) struct SelectCot {
-    select: IndexMap<Cot, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send>>,
+    select: IndexMap<Cot, Box<dyn Eval<(MapCtx, Option<Link>), Result<JsonCtx, Error>> + Send>>,
 }
 //
 //
 impl SelectCot {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(select: Vec<(Cot, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(Cot, Box<dyn Eval<(MapCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select
                 // select.into_iter().map(|(cot, eval)| -> (Cot, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>) {
@@ -27,8 +27,8 @@ impl SelectCot {
 }
 //
 //
-impl Eval<BytesCtx, Result<JsonCtx, Error>> for SelectCot {
-    fn eval(&mut self, input: BytesCtx) -> Result<JsonCtx, Error> {
+impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> for SelectCot {
+    fn eval(&mut self, (input, link): (BytesCtx, Option<Link>)) -> Result<JsonCtx, Error> {
         let error = Error::new("SelectCot", "eval");
         match serde_json::from_slice(&input.bytes) {
             Ok(value) => {
@@ -42,7 +42,7 @@ impl Eval<BytesCtx, Result<JsonCtx, Error>> for SelectCot {
                                         let cot: Cot = cot;
                                         match self.select.get_mut(&cot) {
                                             Some(eval) => {
-                                                eval.eval(MapCtx { map: map.to_owned(), id: input.id })
+                                                eval.eval((MapCtx { map: map.to_owned(), id: input.id }, link))
                                             },
                                             None => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                         }

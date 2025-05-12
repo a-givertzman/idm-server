@@ -1,27 +1,21 @@
+mod select_act;
+mod select_req;
 mod connection_conf;
 mod connection;
 mod cot;
+mod event;
+mod reply;
+mod select_cot;
 mod server_conf;
 mod server;
 
-mod context;
-mod select_dev_doc;
-mod select_dev_info;
-mod select_cot;
-mod select_req;
-mod request;
-mod reply;
-
-pub(crate) use context::*;
-pub(crate) use select_dev_doc::*;
-pub(crate) use select_dev_info::*;
-pub(crate) use select_cot::*;
-pub(crate) use select_req::*;
-pub(crate) use request::*;
-use reply::*;
-
-pub use connection_conf::*;
-pub use connection::*;
-pub use cot::*;
-pub use server_conf::*;
+pub use         select_act::*;
+pub(crate) use  select_req::*;
+pub use         connection_conf::*;
+pub use         connection::*;
+pub use         cot::*;
+pub(crate) use  event::*;
+use             reply::*;
+pub(crate) use  select_cot::*;
+pub use         server_conf::*;
 pub use server::*;

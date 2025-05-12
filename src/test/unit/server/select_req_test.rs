@@ -93,7 +93,7 @@ mod select_req {
                 id: DevId(step),
                 map: json!(req).as_object().unwrap().to_owned(),
             };
-            let result = select_req.eval(val);
+            let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
                     let target = JsonCtx { id: DevId(step), value: json!(target) };
