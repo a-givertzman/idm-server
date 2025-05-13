@@ -142,7 +142,7 @@ impl Connection {
                                         if let Some(reply) = reply {
                                             match serde_json::to_vec(&reply) {
                                                 Ok(bytes) => {
-                                                    if let Err(err) = link.send(Event { id: id.0, bytes }) {
+                                                    if let Err(err) = link.send(Event { msg_id: id.0, bytes }) {
                                                         log::warn!("{dbg}.run | Send reply error: {:?}", err);
                                                     }
                                                 }
@@ -204,7 +204,7 @@ impl Connection {
         let hub_exit = self.hub_exit.clone();
         let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
             let mut message = Self::tcp_message(&dbg);
-            let bytes = message.build(&event.bytes, event.id);
+            let bytes = message.build(&event.bytes, event.msg_id);
             if let Err(err) = w_stream.write_all(&bytes) {
                 log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
                 if let Err(err) = Self::close(&dbg, &stream) {

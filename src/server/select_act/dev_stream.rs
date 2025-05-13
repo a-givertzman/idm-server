@@ -1,8 +1,10 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use bincode::{Decode, Encode};
 use coco::Stack;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
-use crate::{domain::{Error, Eval, Link}, server::{Event, MapCtx, Reply}};
+use serde::{Deserialize, Serialize};
+use crate::{domain::{Error, Eval, Link}, server::{Event, MapCtx}};
 use super::DevStreamConf;
 
 ///
@@ -40,19 +42,21 @@ impl DevStream {
 impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
     fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
         let error = Error::new("DevStream", "eval");
-        let dbg = self.dbg.clone();
         match link {
             Some(link) => {
+                let dbg = self.dbg.clone();
+                let conf = self.conf.clone();
                 let exit = self.exit.clone();
                 log::warn!("{dbg}.run | Staring...");
                 let handle = self.scheduler.spawn(move || {
                     'main: loop {
-                        let event = Event {
-                            id: input.id.0,
-                            bytes: vec![],
-                        };
-                        if let Err(err) = link.send(Ok::<_, Error>(event)) {
-                            log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                        for (id, dev_conf) in &conf.devices {
+                            let dev_state = String::new();
+                            let dev_value = String::new();
+                            let bytes = serde_json::to_vec(&Device { id: id.to_owned(), state: dev_state, value: dev_value });
+                            if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes: vec![] })) {
+                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                            }
                         }
                         if exit.load(Ordering::SeqCst) {
                             break 'main;
@@ -79,3 +83,13 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
 //
 //
 unsafe impl Send for DevStream {}
+///
+/// Device stream info
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Device {
+    id: String,
+    /// Like On/Off
+    state: String,
+    /// Like speed, current, etc...
+    value: String,
+}
