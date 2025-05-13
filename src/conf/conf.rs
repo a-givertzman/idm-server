@@ -1,14 +1,13 @@
 use std::{fs::OpenOptions, path::Path};
 use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::{api::ApiConf, server::ServerConf};
+use crate::server::ServerConf;
 
 ///
 /// The application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conf {
     pub server: ServerConf,
-    pub api: ApiConf,
 }
 //
 //
