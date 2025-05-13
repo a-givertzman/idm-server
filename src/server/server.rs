@@ -3,7 +3,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, Request, SelectAct, SelectDevDoc, SelectDevInfo, SelectDevStream};
+use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, Request, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -63,7 +63,12 @@ impl Server {
                                                 (Cot::Act, Box::new(SelectAct::new(
                                                     vec![
                                                         // Handling incomong command `DeviceStream`
-                                                        (Command::DeviceStream, Box::new(SelectDevStream::new())),
+                                                        (Command::DeviceStream, Box::new(DevStream::new(
+                                                            &dbg,
+                                                            conf.dev_stream.clone(),
+                                                            scheduler.clone(),
+
+                                                        ))),
                                                     ]
                                                 ))),
                                                 // Handling incomong messages with Cot::Req by field `req`
