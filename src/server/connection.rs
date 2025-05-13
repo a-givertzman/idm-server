@@ -106,7 +106,6 @@ impl Connection {
         let mut ctx = self.ctx.pop().unwrap();
         let mut r_stream = BufReader::new(stream.try_clone().unwrap());
         let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
-        // let hub_link = hub.hub_link();
         let send_result = self.send(stream.try_clone().unwrap(), hub.clone());
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
@@ -122,35 +121,34 @@ impl Connection {
                                 match kind {
                                     MessageKind::Bytes => {
                                         let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub.link()))) {
-                                            Ok(reply) => Reply {
-                                                id: reply.id.0,
-                                                data: reply.value,
-                                                error: None,
-                                            },
-                                            Err(err) => Reply {
+                                            Ok(reply) => {
+                                                match reply.is_empty {
+                                                    true => None,
+                                                    false => Some(Reply {
+                                                        id: reply.id.0,
+                                                        data: reply.value,
+                                                        error: None,
+                                                    }),
+                                                }
+                                            }
+                                            Err(err) => Some(Reply {
                                                 id: id.0,
                                                 data: serde_json::Value::Null,
                                                 error: Some(super::ReplyError {
                                                     message: error.pass(err).to_string()
                                                 }),
-                                            }
+                                            })
                                         };
-                                        match serde_json::to_vec(&reply) {
-                                            Ok(bytes) => {
-                                                if let Err(err) = link.send(Event { id: id.0, bytes }) {
-                                                    log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                        if let Some(reply) = reply {
+                                            match serde_json::to_vec(&reply) {
+                                                Ok(bytes) => {
+                                                    if let Err(err) = link.send(Event { id: id.0, bytes }) {
+                                                        log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                                    }
                                                 }
-                                                // let bytes = message.build(&bytes, id.0);
-                                                // if let Err(err) = w_stream.write_all(&bytes) {
-                                                //     log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
-                                                //     if let Err(err) = Self::close(&dbg, &stream) {
-                                                //         log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
-                                                //     }
-                                                //     break 'main;
-                                                // }
-                                            }
-                                            Err(err) => {
-                                                log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                                Err(err) => {
+                                                    log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                                }
                                             }
                                         }
                                     }
@@ -284,6 +282,7 @@ impl Connection {
     }
     ///
     /// Returns when internal thread's will finished
+    #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "wait");
         match self.handle.pop() {
@@ -302,6 +301,7 @@ impl Connection {
 ///
 /// Connection status
 enum IsConnected<T, E> {
+    #[allow(unused)]
     Active(T),
     Closed(E),
 }

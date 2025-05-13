@@ -37,17 +37,20 @@ impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> for SelectCot {
                     Some(map) => {
                         match map.get("cot") {
                             Some(cot) => {
-                                match serde_json::from_value(cot.to_owned()) {
+                                match Cot::try_from(cot) {
                                     Ok(cot) => {
-                                        let cot: Cot = cot;
                                         match self.select.get_mut(&cot) {
                                             Some(eval) => {
-                                                eval.eval((MapCtx { map: map.to_owned(), id: input.id }, link))
+                                                match cot {
+                                                    Cot::Act => eval.eval((MapCtx { map: map.to_owned(), id: input.id }, link)),
+                                                    Cot::Req => eval.eval((MapCtx { map: map.to_owned(), id: input.id }, None)),
+                                                    _ => Err(error.err(format!("Cot {:?} - is not supported", cot))),
+                                                }
                                             },
                                             None => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                         }
                                     }
-                                    Err(err) => Err(error.pass_with(format!("Cot can't be parsed {:#?}", cot), err.to_string())),
+                                    Err(err) => Err(error.pass_with("Parse cot error", err)),
                                 }
                             }
                             None => Err(error.err(format!("Field 'cot' missed in the request {:#?}", map))),

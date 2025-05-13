@@ -124,7 +124,7 @@ impl Eval<DevId, Result<JsonCtx, Error>> for DeviceInfo {
         let error = Error::new("DeviceInfo", "eval");
         let path = self.path.join(format!("{}.json", id.0));
         match Self::read(path) {
-            Ok(value) => Ok(JsonCtx { id, value: json!(value) }),
+            Ok(value) => Ok(JsonCtx::new(id, json!(value))),
             Err(err) => Err(error.pass(err)),
         }
     }

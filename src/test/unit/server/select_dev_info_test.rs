@@ -126,7 +126,7 @@ mod select_dev_info {
         fn eval(&mut self, id: DevId) -> Result<JsonCtx, Error> {
         let error = Error::new("FakeDeviceInfo", "eval");
             match self.val.get(&(id.0)) {
-                Some(val) => Ok(JsonCtx { id, value: json!(val) }),
+                Some(val) => Ok(JsonCtx::new(id, json!(val))),
                 None => Err(error.err(format!("id {} - is not found in the test_data", id.0))),
             }
         }

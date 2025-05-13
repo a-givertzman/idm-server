@@ -96,7 +96,7 @@ mod select_req {
             let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
-                    let target = JsonCtx { id: DevId(step), value: json!(target) };
+                    let target = JsonCtx::new(DevId(step), json!(target));
                     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 }
                 (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -160,7 +160,7 @@ mod select_req {
                         Ok(data) => {
                             let req: ReqData = data;
                             match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx { id: input.id, value: json!(value) }),
+                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }
                         }
@@ -201,7 +201,7 @@ mod select_req {
                         Ok(data) => {
                             let req: ReqData = data;
                             match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx { id: input.id, value: json!(value) }),
+                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }
                         }
@@ -242,7 +242,7 @@ mod select_req {
                         Ok(data) => {
                             let req: ReqData = data;
                             match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx { id: input.id, value: json!(value) }),
+                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }
                         }

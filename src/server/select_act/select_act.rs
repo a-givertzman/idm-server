@@ -33,7 +33,7 @@ impl<R: std::hash::Hash + std::cmp::Eq + serde::de::DeserializeOwned + Debug> Ev
                         let req: R = req;
                         match self.select.get_mut(&req) {
                             Some(eval) => {
-                                eval.eval((input, link));
+                                let _ = eval.eval((input, link));
                                 Ok(JsonCtx::empty())
                             },
                             None => Err(error.err(format!("Request {:?} - is not supported", req))),

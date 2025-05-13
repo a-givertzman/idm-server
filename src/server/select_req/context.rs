@@ -13,10 +13,18 @@ pub struct BytesCtx {
 pub struct JsonCtx {
     pub id: DevId,
     pub value: serde_json::Value,
+    pub is_empty: bool,
 }
 impl JsonCtx {
+    pub fn new(id: DevId, value: serde_json::Value) -> Self {
+        Self { id, value, is_empty: false }
+    }
     pub fn empty() -> Self {
-        Self { id: DevId(0), value: serde_json::Value::Null }
+        Self {
+            id: DevId(0),
+            value: serde_json::Value::Null,
+            is_empty: true,
+        }
     }
 }
 ///

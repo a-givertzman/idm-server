@@ -2,8 +2,8 @@ use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::D
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
-use crate::{device_info::DeviceInfo, domain::Eval, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, JsonCtx, MapCtx, Request, SelectAct, SelectDevDoc, SelectDevInfo, SelectDevStream};
+use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
+use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, Request, SelectAct, SelectDevDoc, SelectDevInfo, SelectDevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -112,6 +112,7 @@ impl Server {
     }
     ///
     /// Returns when internal thread's will finished
+    #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
         let error = Error::new(&self.dbg, "wait");
         while !self.connections.is_empty() {
@@ -128,6 +129,7 @@ impl Server {
     }
     ///
     /// Sends exit signal to main tread
+    #[allow(unused)]
     pub fn exit(&self) {
         if let Some(listener) = self.listener.pop() {
             if let Err(err) = listener.set_nonblocking(true) {
@@ -146,7 +148,4 @@ impl Server {
         }
         self.exit.store(true, Ordering::SeqCst);
     }
-}
-pub fn select(ctx: impl Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static) -> impl Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static {
-    ctx
 }
