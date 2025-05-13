@@ -40,7 +40,7 @@ impl Hub {
         remote
     }
     /// 
-    /// Returns new connected `Link`
+    /// Returns new connected `Link` later
     pub fn hub_link(&self) -> HubLink {
         let name = self.name.clone();
         let links = self.links.clone();
