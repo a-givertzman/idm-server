@@ -1,0 +1,14 @@
+{
+    "id": 111,
+    "manufacturer": "MAN01",
+    "vendor": "VEN01",
+    "order-code": "OC01",
+    "model": "MOD01",
+    "serial": "SER01",
+    "name": "NAM01",
+    "description": "DESC01",
+    "width": "W01",
+    "height": "H01",
+    "depth": "DEP01",
+    "weight": "WEI01"
+}

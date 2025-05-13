@@ -1,0 +1,14 @@
+{
+    "id": 222,
+    "manufacturer": "MAN02",
+    "vendor": "VEN02",
+    "order-code": "OC02",
+    "model": "MOD02",
+    "serial": "SER02",
+    "name": "NAM02",
+    "description": "DESC02",
+    "width": "W02",
+    "height": "H02",
+    "depth": "DEP02",
+    "weight": "WEI02"
+}

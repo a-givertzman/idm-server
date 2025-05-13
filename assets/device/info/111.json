@@ -1,0 +1,14 @@
+{
+    "id": 123,
+    "manufacturer": "КЭАЗ",
+    "vendor": "КЭАЗ",
+    "order-code": "336023",
+    "model": "KEAZ.336023",
+    "serial": "OptiStart TF-M",
+    "name": "Реле перегрузки",
+    "description": "Реле перегрузки OptiStart TF-MAP-1,5 для мини-контактора серии OptiStart K-M\nРеле чувствительно к обрыву фазы\nМаксимальный ток 6 А (230В)",
+    "width": "44",
+    "height": "36",
+    "depth": "89,2",
+    "weight": "0,06"
+}
