@@ -105,13 +105,13 @@ impl Connection {
         self.set_tcp_timeout(&stream, conf.timeout);
         let mut ctx = self.ctx.pop().unwrap();
         let mut r_stream = BufReader::new(stream.try_clone().unwrap());
-        let hub = Hub::new(&dbg, Some(self.hub_exit.clone()));
-        let hub_link = hub.hub_link();
-        let send_result = self.send(stream.try_clone().unwrap(), hub);
+        let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
+        // let hub_link = hub.hub_link();
+        let send_result = self.send(stream.try_clone().unwrap(), hub.clone());
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let error = Error::new("Connection", "run");
-            let link = hub_link.link();
+            let link = hub.link();
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
             'main: loop {
@@ -121,7 +121,7 @@ impl Connection {
                             Ok((id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub_link.link()))) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub.link()))) {
                                             Ok(reply) => Reply {
                                                 id: reply.id.0,
                                                 data: reply.value,
@@ -200,7 +200,7 @@ impl Connection {
     }
     ///
     /// Sends messages to the socket
-    fn send(&self, stream: TcpStream, hub: Hub) -> Result<(), Error> {
+    fn send(&self, stream: TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let mut w_stream = BufWriter::new(stream.try_clone().unwrap());
         let hub_exit = self.hub_exit.clone();
