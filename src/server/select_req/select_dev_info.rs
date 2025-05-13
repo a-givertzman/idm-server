@@ -1,6 +1,6 @@
-use sal_core::error::Error;
-use crate::{device_info::DevId, domain::Eval};
+use crate::{device_info::DevId, domain::{Error, Eval}};
 use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
+
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
 /// - Forwarding requested id to the specified `ctx`

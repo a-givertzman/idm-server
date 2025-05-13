@@ -1,11 +1,11 @@
-use sal_core::error::Error;
-use crate::domain::Eval;
+use crate::domain::{Error, Eval};
 use super::{request::DeviceDocRequest, JsonCtx, MapCtx};
+
 ///
 /// Extracting incoming messages as [DeviceDocRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceDoc]
-pub(crate) struct SelectDevDoc {
+pub struct SelectDevDoc {
     // ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
 }
 //

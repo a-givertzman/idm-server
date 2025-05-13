@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use indexmap::IndexMap;
-use sal_core::error::Error;
-use crate::{domain::{Eval, Link}, server::{JsonCtx, MapCtx}};
+use crate::{domain::{Error, Eval, Link}, server::{JsonCtx, MapCtx}};
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers

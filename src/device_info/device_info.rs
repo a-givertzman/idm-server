@@ -1,8 +1,7 @@
 use std::{fs::OpenOptions, path::{Path, PathBuf}};
-use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::{domain::Eval, server::JsonCtx};
+use crate::{domain::{Error, Eval}, server::JsonCtx};
 ///
 /// Wrapper for the [DeviceInfo] id of type u32
 #[derive(Debug, PartialEq)]

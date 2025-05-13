@@ -1,7 +1,5 @@
 use indexmap::IndexMap;
-use sal_core::error::Error;
-use crate::domain::{Eval, Link};
-
+use crate::domain::{Error, Eval, Link};
 use super::{BytesCtx, Cot, JsonCtx, MapCtx};
 ///
 /// Matching incoming messages by it's Cot

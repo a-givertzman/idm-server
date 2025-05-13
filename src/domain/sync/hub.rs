@@ -1,7 +1,8 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use bincode::{Decode, Encode};
-use sal_core::error::Error;
 use sal_sync::{services::entity::{Name, PointTxId}, thread_pool::{JoinHandle, Scheduler}};
+use crate::domain::Error;
+
 use super::{link::Link, LinkSend};
 ///
 /// Combines multiple links
@@ -39,18 +40,18 @@ impl Hub {
         self.links.pin().insert(key, local);
         remote
     }
-    /// 
-    /// Returns new connected `Link` later
-    pub fn hub_link(&self) -> HubLink {
-        let name = self.name.clone();
-        let links = self.links.clone();
-        HubLink::new(move || {
-            let (local, remote) = Link::split(&format!("{}:{}", name, links.len()));
-            let key = remote.name().join();
-            links.pin().insert(key, local);
-            remote
-        })
-    }
+    // /// 
+    // /// Returns new connected `Link` later
+    // pub fn hub_link(&self) -> HubLink {
+    //     let name = self.name.clone();
+    //     let links = self.links.clone();
+    //     HubLink::new(move || {
+    //         let (local, remote) = Link::split(&format!("{}:{}", name, links.len()));
+    //         let key = remote.name().join();
+    //         links.pin().insert(key, local);
+    //         remote
+    //     })
+    // }
     /// Listenning incomong events in the closure
     /// - Closure provides incoming event's
     /// - Send reoly
@@ -115,13 +116,14 @@ impl Hub {
         log::debug!("{}.listen | Starting - Ok", dbg);
         handle.map_err(|err| error.pass(err.to_string()))
     }
-    ///
-    /// Returns a copy ov the exit signal
-    pub fn get_exit(&self) -> Arc<AtomicBool> {
-        self.exit.clone()
-    }
+    // ///
+    // /// Returns a copy ov the exit signal
+    // pub fn get_exit(&self) -> Arc<AtomicBool> {
+    //     self.exit.clone()
+    // }
     ///
     /// Sends "exit" signal to the service's task
+    #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
         let links = self.links.pin();
@@ -146,18 +148,18 @@ impl Debug for Hub {
             .finish()
     }
 }
-///
-/// Provides ask [Link] later
-pub struct HubLink {
-    op: Box<dyn Fn() -> Link + Send + Sync>,
-}
-impl HubLink {
-    pub fn new(op: impl Fn() -> Link + Send + Sync + 'static) -> Self {
-        Self {
-            op: Box::new(op),
-        }
-    }
-    pub fn link(&self) -> Link {
-        (self.op)()
-    }
-}
+// ///
+// /// Provides ask [Link] later
+// pub struct HubLink {
+//     op: Box<dyn Fn() -> Link + Send + Sync>,
+// }
+// impl HubLink {
+//     pub fn new(op: impl Fn() -> Link + Send + Sync + 'static) -> Self {
+//         Self {
+//             op: Box::new(op),
+//         }
+//     }
+//     pub fn link(&self) -> Link {
+//         (self.op)()
+//     }
+// }

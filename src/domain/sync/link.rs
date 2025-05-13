@@ -1,9 +1,8 @@
 use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, thread::JoinHandle, time::Duration};
 use bincode::{Decode, Encode};
 use coco::Stack;
-use sal_core::error::Error;
 use sal_sync::services::entity::{Name, PointTxId};
-use crate::domain::types::{Receiver, RecvTimeoutError, Sender};
+use crate::domain::{types::{Receiver, RecvTimeoutError, Sender}, Error};
 use super::{LinkSend, DEFAULT_TIMEOUT};
 
 ///
@@ -27,6 +26,7 @@ impl Link {
     /// - `send` - local side of channel.send
     /// - `recv` - local side of channel.recv
     /// - `exit` - exit signal for `listen` method
+    #[allow(unused)]
     pub fn new(parent: impl Into<String>, send: Sender<Vec<u8>>, recv: Receiver<Vec<u8>>) -> Self {
         let name = Name::new(parent, "Link");
         let loc_recv_st = Stack::new();
@@ -88,6 +88,7 @@ impl Link {
     /// - Sends a request,
     /// - Await reply,
     /// - Returns parsed reply
+    #[allow(unused)]
     pub fn call<T: Decode<()> + Debug>(&self, query: impl Encode + Debug) -> Result<T, Error> {
         let error = Error::new(&self.name, "call");
         let q = format!("{:#?}", query);
@@ -125,6 +126,7 @@ impl Link {
     /// - Callback receives `Event`
     /// - Callback returns `Some<Event>` - to be sent
     /// - Callback returns None - nothing to be sent
+    #[allow(unused)]
     pub fn listen<In: Decode<()> + Debug, Out: Encode + Debug>(&mut self, op: impl Fn(In) -> Option<Out> + Send + 'static) -> Result<JoinHandle<()>, Error> {
         let error = Error::new(&self.name, "listen");
         let dbg = self.name.join();
@@ -184,6 +186,7 @@ impl Link {
     /// - Returns Err if `Link` is closed
     /// 
     /// **Important note**: this function is not lock-free as it acquires a mutex guard of the channel internal for a short time.
+    #[allow(unused)]
     pub fn try_recv<T: Decode<()> + Debug>(&self) -> Result<Option<T>, Error> {
         let error = Error::new(&self.name, "try_recv");
         match self.recv.pop() {
@@ -250,6 +253,7 @@ impl Link {
     /// - Returns Ok<T> if channel has query
     /// - Returns None if channel is empty for now
     /// - Returns Err if channel is closed
+    #[allow(unused)]
     pub fn recv<T: Decode<()> + Debug>(&self) -> Result<T, Error> {
         let error = Error::new(&self.name, "recv");
         match self.recv.pop() {
@@ -288,6 +292,7 @@ impl Link {
     }
     ///
     /// Returns internal `exit` signal to be paired
+    #[allow(unused)]
     pub fn exit_pair(&self) -> Arc<AtomicBool> {
         self.exit.clone()
     }

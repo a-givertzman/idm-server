@@ -1,5 +1,6 @@
-use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
+
+use crate::domain::Error;
 
 ///
 /// Cose of transmission of the TCP message

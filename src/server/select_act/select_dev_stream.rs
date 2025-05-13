@@ -1,7 +1,7 @@
-use sal_core::error::Error;
+use crate::{domain::{Error, Eval, Link}, server::MapCtx};
 
-use crate::{domain::{Eval, Link}, server::MapCtx};
-
+///
+/// Producess Device's events
 pub struct SelectDevStream {}
 //
 //

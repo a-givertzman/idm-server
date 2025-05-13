@@ -1,7 +1,6 @@
 use std::{fs::OpenOptions, path::Path};
-use sal_core::error::Error;
 use serde::{Deserialize, Serialize};
-use crate::server::ServerConf;
+use crate::{domain::Error, server::ServerConf};
 
 ///
 /// The application configuration

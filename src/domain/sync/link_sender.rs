@@ -1,7 +1,6 @@
 use bincode::Encode;
-use sal_core::error::Error;
 use sal_sync::services::entity::Name;
-use crate::domain::types::Sender;
+use crate::domain::{types::Sender, Error};
 
 ///
 /// Wrapper for `Sender<Vec<u8>>`,
