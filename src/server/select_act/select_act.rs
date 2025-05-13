@@ -41,7 +41,7 @@ impl<R: std::hash::Hash + std::cmp::Eq + serde::de::DeserializeOwned + Debug> Ev
                     Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", req), err.to_string())),
                 }
             }
-            None => Err(error.err(format!("Field 'req' missed in the request {:#?}", input.map))),
+            None => Err(error.err(format!("Field 'act' missed in the request {:#?}", input.map))),
         }
     }
 }

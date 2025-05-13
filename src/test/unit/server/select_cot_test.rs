@@ -7,7 +7,8 @@ mod select_cot {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::Eval, server::{BytesCtx, Cot, JsonCtx, MapCtx, SelectCot, SelectReq}};
+    use crate::{device_info::DevId, domain::{Eval, Link}, server::{BytesCtx, Cot, JsonCtx, SelectAct, SelectCot, SelectReq}};
+    use super::super::{Reply, fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}, ReqData};
     ///
     ///
     static INIT: Once = Once::new();
@@ -36,36 +37,74 @@ mod select_cot {
         let test_data = [
             (
                 01,
-                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Request1 01".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Request1 01".into()), ..Default::default() },
                 Ok("Reply1 01"),
             ),
             (
                 02,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Request2 02".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Request2 02".into()), ..Default::default() },
                 Ok("Reply2 02"),
             ),
             (
                 03,
-                FakeRequest { cot: Cot::Req, req: Request::Req3, data: ReqData("Request3 03".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req3, data: ReqData("Request3 03".into()), ..Default::default() },
                 Ok("Reply3 03"),
             ),
             (
                 04,
-                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Error 04".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Error 04".into()), ..Default::default() },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 05".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 05".into()), ..Default::default() },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 06".into()) },
+                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 06".into()), ..Default::default() },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
+            (
+                07,
+                FakeRequest { cot: Cot::Act, act: Command::Cmd1, data: ReqData("Command1 07".into()), ..Default::default() },
+                Ok("CmdReply1 07"),
+            ),
+            (
+                08,
+                FakeRequest { cot: Cot::Act, act: Command::Cmd2, data: ReqData("Command2 08".into()), ..Default::default() },
+                Ok("CmdReply2 08"),
+            ),
+            (
+                09,
+                FakeRequest { cot: Cot::Act, act: Command::Cmd3, data: ReqData("Command3 09".into()), ..Default::default() },
+                Ok("CmdReply3 09"),
+            ),
         ];
-        let mut select_req = SelectCot::new(vec![
+        let mut select = SelectCot::new(vec![
+            (Cot::Act, Box::new(SelectAct::new(vec![
+                (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectAct1", "").err(request));
+                    }
+                    let reply = request.replace("Command1", "CmdReply1");
+                    Ok(reply)
+                }))),
+                (Command::Cmd2, Box::new(FakeSelectAct2::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectAct2", "").err(request));
+                    }
+                    let reply = request.replace("Command2", "CmdReply2");
+                    Ok(reply)
+                }))),
+                (Command::Cmd3, Box::new(FakeSelectAct3::new(|request| {
+                    if request.to_lowercase().contains("error") {
+                        return Err(Error::new("FakeSelectAct3", "").err(request));
+                    }
+                    let reply = request.replace("Command3", "CmdReply3");
+                    Ok(reply)
+                }))),
+            ]))),
             (Cot::Req, Box::new(SelectReq::new(vec![
                 (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
                     if request.to_lowercase().contains("error") {
@@ -96,31 +135,69 @@ mod select_cot {
                 id: DevId(step),
                 bytes,
             };
-            let result = select_req.eval((val, None));
-            match (result, target) {
-                (Ok(result), Ok(target)) => {
-                    let target = JsonCtx::new(DevId(step), json!(target));
-                    assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+            match req.cot {
+                Cot::Act => {
+                    let (loc, rem) = Link::split(&dbg);
+                    let select_result = select.eval((val, Some(rem)));
+                    let select_target = Ok(JsonCtx::empty());
+                    assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
+                    let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
+                    match (result, target) {
+                        (Ok(result), Ok(target)) => {
+                            let target = Some(Reply { id: step, data: target.to_owned(), error: None });
+                            assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+                        }
+                        (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+                        (Err(result), Ok(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+                        (Err(_), Err(_)) => {}
+                    }
                 }
-                (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
-                (Err(result), Ok(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
-                (Err(_), Err(_)) => {}
+                Cot::Req => {
+                    let result = select.eval((val, None));
+                    match (result, target) {
+                        (Ok(result), Ok(target)) => {
+                            let target = JsonCtx::new(DevId(step), json!(target));
+                            assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
+                        }
+                        (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+                        (Err(result), Ok(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+                        (Err(_), Err(_)) => {}
+                    }
+                }
+                _ => panic!("step {step} Unexpected cot {:?}", req.cot)
             }
+            
         }
-        // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        // assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();
     }
-    ///
-    /// Request kind 1
-    #[derive(Debug, Serialize, Deserialize)]
-    struct ReqData(pub String);
     ///
     /// Fake Request
     #[derive(Debug, Serialize, Deserialize)]
     struct FakeRequest {
         cot: Cot,
+        act: Command,
         req: Request,
         data: ReqData
+    }
+    impl Default for FakeRequest {
+        fn default() -> Self {
+        Self {
+            cot: Cot::Inf,
+            act: Command::None,
+            req: Request::None,
+            data: ReqData(String::new()),
+        }
+    }
+    }
+    ///
+    /// Fake List of API requiests
+    #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
+    enum Command {
+        Cmd1,
+        Cmd2,
+        Cmd3,
+        None,
     }
     ///
     /// Fake List of API requiests
@@ -129,135 +206,6 @@ mod select_cot {
         Req1,
         Req2,
         Req3,
+        None,
     }
-    ///
-    /// Reply
-    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    struct Reply {
-        data: String,
-        error: Option<String>,
-    }
-    ///
-    /// Fake Req1 handler
-    pub(crate) struct FakeSelectReq1 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq1 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq1 {
-        fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
-            let error = Error::new("FakeSelectReq1", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq1 {}
-    ///
-    /// Fake Req2 handler
-    pub(crate) struct FakeSelectReq2 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq2 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq2 {
-        fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
-            let error = Error::new("FakeSelectReq2", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq2 {}
-    ///
-    /// Fake Req3 handler
-    pub(crate) struct FakeSelectReq3 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq3 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq3 {
-        fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
-            let error = Error::new("FakeSelectReq3", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq3 {}
 }

@@ -27,6 +27,7 @@ impl LinkSend {
     }
     ///
     /// Sending event, generic `T` over the `Link`
+    #[allow(unused)]
     pub fn send(&self, event: impl Encode + std::fmt::Debug) -> Result<(), Error> {
         let error = Error::new(&self.name, "send");
         match bincode::encode_to_vec(event, self.config) {

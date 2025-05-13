@@ -2,13 +2,13 @@
 
 mod select_act {
     use std::{sync::Once, time::Duration};
-    use bincode::{Decode, Encode};
     use sal_core::{dbg::Dbg, error::Error};
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::{Eval, Link}, server::{MapCtx, SelectAct}};
+    use crate::{device_info::DevId, domain::{Eval, Link}, server::{JsonCtx, MapCtx, SelectAct}};
+    use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command, Reply, ReqData};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,53 +37,53 @@ mod select_act {
         let test_data = [
             (
                 01,
-                FakeRequest { req: Command::Cmd1, data: ReqData("Request1 01".into()) },
+                FakeRequest { act: Command::Cmd1, data: ReqData("Request1 01".into()) },
                 Ok("Reply1 01"),
             ),
             (
                 02,
-                FakeRequest { req: Command::Cmd2, data: ReqData("Request2 02".into()) },
+                FakeRequest { act: Command::Cmd2, data: ReqData("Request2 02".into()) },
                 Ok("Reply2 02"),
             ),
             (
                 03,
-                FakeRequest { req: Command::Cmd3, data: ReqData("Request3 03".into()) },
+                FakeRequest { act: Command::Cmd3, data: ReqData("Request3 03".into()) },
                 Ok("Reply3 03"),
             ),
             (
                 04,
-                FakeRequest { req: Command::Cmd1, data: ReqData("Error 04".into()) },
+                FakeRequest { act: Command::Cmd1, data: ReqData("Error 04".into()) },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                FakeRequest { req: Command::Cmd2, data: ReqData("Error 05".into()) },
+                FakeRequest { act: Command::Cmd2, data: ReqData("Error 05".into()) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                FakeRequest { req: Command::Cmd2, data: ReqData("Error 06".into()) },
+                FakeRequest { act: Command::Cmd2, data: ReqData("Error 06".into()) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
         let mut select_act = SelectAct::new(vec![
-            (Command::Cmd1, Box::new(FakeSelectReq1::new(|request| {
+            (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                 if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
+                    return Err(Error::new("FakeSelectAct1", "").err(request));
                 }
                 let reply = request.replace("Request1", "Reply1");
                 Ok(reply)
             }))),
-            (Command::Cmd2, Box::new(FakeSelectReq2::new(|request| {
+            (Command::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                 if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
+                    return Err(Error::new("FakeSelectAct2", "").err(request));
                 }
                 let reply = request.replace("Request2", "Reply2");
                 Ok(reply)
             }))),
-            (Command::Cmd3, Box::new(FakeSelectReq3::new(|request| {
+            (Command::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                 if request.to_lowercase().contains("error") {
-                    return Err(Error::new("FakeSelectReq2", "").err(request));
+                    return Err(Error::new("FakeSelectAct3", "").err(request));
                 }
                 let reply = request.replace("Request3", "Reply3");
                 Ok(reply)
@@ -95,7 +95,9 @@ mod select_act {
                 map: json!(req).as_object().unwrap().to_owned(),
             };
             let (loc, rem) = Link::split(&dbg);
-            let s = select_act.eval((val, Some(rem)));
+            let select_result = select_act.eval((val, Some(rem)));
+            let select_target = Ok(JsonCtx::empty());
+            assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
             let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
@@ -107,166 +109,13 @@ mod select_act {
                 (Err(_), Err(_)) => {}
             }
         }
-        // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();
     }
-    ///
-    /// Request kind 1
-    #[derive(Debug, Serialize, Deserialize)]
-    struct ReqData(pub String);
     ///
     /// Fake Request
     #[derive(Debug, Serialize, Deserialize)]
     struct FakeRequest {
-        req: Command,
+        act: Command,
         data: ReqData
     }
-    ///
-    /// Fake List of API requiests
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    enum Command {
-        Cmd1,
-        Cmd2,
-        Cmd3,
-    }
-    ///
-    /// Reply
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash, Encode, Decode)]
-    struct Reply {
-        id: u32,
-        data: String,
-        error: Option<String>,
-    }
-    ///
-    /// Fake Req1 handler
-    pub(crate) struct FakeSelectReq1 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq1 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectReq1 {
-        fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
-            let error = Error::new("FakeSelectReq1", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => {
-                                    link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
-                                    Ok(())
-                                }
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq1 {}
-    ///
-    /// Fake Req2 handler
-    pub(crate) struct FakeSelectReq2 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq2 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectReq2 {
-        fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
-            let error = Error::new("FakeSelectReq2", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => {
-                                    link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
-                                    Ok(())
-                                }
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq2 {}
-    ///
-    /// Fake Req3 handler
-    pub(crate) struct FakeSelectReq3 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
-    }
-    //
-    //
-    impl FakeSelectReq3 {
-        ///
-        /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
-            Self {
-                ctx: Box::new(ctx),
-            }
-        }
-    }
-    //
-    //
-    impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectReq3 {
-        fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
-            let error = Error::new("FakeSelectReq3", "eval");
-            match input.map.get("data") {
-                Some(cot) => {
-                    match serde_json::from_value(cot.to_owned()) {
-                        Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
-                                Ok(value) => {
-                                    link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
-                                    Ok(())
-                                }
-                                Err(err) => Err(error.pass(err.to_string())),
-                            }
-                        }
-                        Err(err) => Err(error.pass(err.to_string())),
-                    }
-                }
-                None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
-            }
-        }
-    }
-    //
-    //
-    unsafe impl Send for FakeSelectReq3 {}
 }
