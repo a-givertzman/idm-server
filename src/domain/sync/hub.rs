@@ -39,7 +39,18 @@ impl Hub {
         self.links.pin().insert(key, local);
         remote
     }
-    ///
+    /// 
+    /// Returns new connected `Link`
+    pub fn hub_link(&self) -> HubLink {
+        let name = self.name.clone();
+        let links = self.links.clone();
+        HubLink::new(move || {
+            let (local, remote) = Link::split(&format!("{}:{}", name, links.len()));
+            let key = remote.name().join();
+            links.pin().insert(key, local);
+            remote
+        })
+    }
     /// Listenning incomong events in the closure
     /// - Closure provides incoming event's
     /// - Send reoly
@@ -133,5 +144,20 @@ impl Debug for Hub {
             .field("timeout", &self.timeout)
             .field("exit", &self.exit)
             .finish()
+    }
+}
+///
+/// Provides ask [Link] later
+pub struct HubLink {
+    op: Box<dyn Fn() -> Link + Send + Sync>,
+}
+impl HubLink {
+    pub fn new(op: impl Fn() -> Link + Send + Sync + 'static) -> Self {
+        Self {
+            op: Box::new(op),
+        }
+    }
+    pub fn link(&self) -> Link {
+        (self.op)()
     }
 }

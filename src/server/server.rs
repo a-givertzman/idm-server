@@ -3,7 +3,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{device_info::DeviceInfo, domain::Eval, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_dev_info::SelectDevInfo, select_req::SelectReq, Command, Cot, JsonCtx, MapCtx, Request, SelectAct, SelectDevDoc, SelectDevStream};
+use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, JsonCtx, MapCtx, Request, SelectAct, SelectDevDoc, SelectDevInfo, SelectDevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address

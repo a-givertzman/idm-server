@@ -106,11 +106,12 @@ impl Connection {
         let mut ctx = self.ctx.pop().unwrap();
         let mut r_stream = BufReader::new(stream.try_clone().unwrap());
         let hub = Hub::new(&dbg, Some(self.hub_exit.clone()));
-        let link = hub.link();
+        let hub_link = hub.hub_link();
         let send_result = self.send(stream.try_clone().unwrap(), hub);
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let error = Error::new("Connection", "run");
+            let link = hub_link.link();
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
             'main: loop {
@@ -120,7 +121,7 @@ impl Connection {
                             Ok((id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub.link()))) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub_link.link()))) {
                                             Ok(reply) => Reply {
                                                 id: reply.id.0,
                                                 data: reply.value,
@@ -298,7 +299,6 @@ impl Connection {
 
     }
 }
-
 ///
 /// Connection status
 enum IsConnected<T, E> {
