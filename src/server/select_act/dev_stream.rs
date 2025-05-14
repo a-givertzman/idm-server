@@ -40,7 +40,7 @@ impl DevStream {
 //
 //
 impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
+    fn eval(&mut self, (_, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(()),

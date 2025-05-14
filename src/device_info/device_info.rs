@@ -5,7 +5,7 @@ use crate::{domain::{Error, Eval}, server::JsonCtx};
 ///
 /// Wrapper for the [DeviceInfo] id of type u32
 #[derive(Debug, PartialEq)]
-pub struct DevId(pub u32);
+pub struct DevId(pub String);
 ///
 /// Reply to `DeviceInfo` request
 /// - Provides basic overview info by device
@@ -27,7 +27,7 @@ pub struct DevId(pub u32);
 pub struct DeviceInfo {
     #[serde(skip)]
     path: PathBuf,
-    pub id: u32,
+    pub id: String,
     pub manufacturer: String,
     pub vendor: String,
     #[serde(rename="order-code")]
@@ -47,7 +47,7 @@ impl DeviceInfo {
     ///
     /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
     pub fn new(
-        id: u32,
+        id: String,
         manufacturer: String,
         vendor: String,
         order_code: String,

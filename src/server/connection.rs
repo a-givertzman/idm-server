@@ -117,10 +117,10 @@ impl Connection {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
-                            Ok((id, kind, _, bytes)) => {
+                            Ok((msg_id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(id.0) }, Some(hub.link()))) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(msg_id.0) }, Some(hub.link()))) {
                                             Ok(reply) => {
                                                 match reply.is_empty {
                                                     true => None,
@@ -132,7 +132,7 @@ impl Connection {
                                                 }
                                             }
                                             Err(err) => Some(Reply {
-                                                id: id.0,
+                                                id: msg_id.0,
                                                 data: serde_json::Value::Null,
                                                 error: Some(super::ReplyError {
                                                     message: error.pass(err).to_string()
@@ -142,7 +142,7 @@ impl Connection {
                                         if let Some(reply) = reply {
                                             match serde_json::to_vec(&reply) {
                                                 Ok(bytes) => {
-                                                    if let Err(err) = link.send(Event { msg_id: id.0, bytes }) {
+                                                    if let Err(err) = link.send(Event { msg_id: msg_id.0, bytes }) {
                                                         log::warn!("{dbg}.run | Send reply error: {:?}", err);
                                                     }
                                                 }
