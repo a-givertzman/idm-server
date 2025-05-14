@@ -27,4 +27,6 @@ indexmap = "^2.8"
 kanal = "^0.1"
 coco = "^0.3"
 papaya = "^0.2"
-
+#
+# Misc
+rand = "^0.9"

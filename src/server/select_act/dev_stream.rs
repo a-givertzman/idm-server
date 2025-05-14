@@ -1,11 +1,12 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use bincode::{Decode, Encode};
 use coco::Stack;
+use rand::Rng;
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::{JoinHandle, Scheduler};
 use serde::{Deserialize, Serialize};
 use crate::{domain::{Error, Eval, Link}, server::{Event, MapCtx}};
-use super::DevStreamConf;
+use super::{DevConf, DevStreamConf};
 
 ///
 /// Producess Device's events
@@ -49,13 +50,24 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                 let exit = self.exit.clone();
                 log::warn!("{dbg}.run | Staring...");
                 let handle = self.scheduler.spawn(move || {
+                    let devices: Vec<Device> = conf.devices.iter().map(|(id, conf)| {
+                        Device::new(
+                            id.to_owned(),
+                            format!("On"),
+                            conf.value,
+                            conf.to_owned(),
+                        )
+                    }).collect();
                     'main: loop {
-                        for (id, dev_conf) in &conf.devices {
-                            let dev_state = String::new();
-                            let dev_value = String::new();
-                            let bytes = serde_json::to_vec(&Device { id: id.to_owned(), state: dev_state, value: dev_value });
-                            if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes: vec![] })) {
-                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                        for dev in &devices {
+                            let dev = Device::from(dev);
+                            match serde_json::to_vec(&dev) {
+                                Ok(bytes) => {
+                                    if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes })) {
+                                        log::warn!("{dbg}.run | Send error: {:?}", err);
+                                    }
+                                },
+                                Err(err) => log::warn!("{dbg}.run | Json error: {:?}", err),
                             }
                         }
                         if exit.load(Ordering::SeqCst) {
@@ -87,9 +99,48 @@ unsafe impl Send for DevStream {}
 /// Device stream info
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Device {
-    id: String,
+    pub id: String,
     /// Like On/Off
-    state: String,
+    pub state: String,
     /// Like speed, current, etc...
-    value: String,
+    pub value: String,
+    #[serde(skip)]
+    pub val: f64,
+    pub conf: DevConf,
+}
+impl Device {
+    ///
+    /// Returns [Device] new instance
+    fn new(id: String, state: String, val: f64, conf: DevConf) -> Self {
+        Self {
+            id,
+            state,
+            value: format!("{:.3}", val),
+            val,
+            conf,
+        }
+    }
+}
+//
+//
+impl From<&Device> for Device {
+    ///
+    /// Returns [Device] created from it prevouse state
+    /// using configured `conf.diviation`
+    fn from(dev: &Device) -> Self {
+        let mut rng = rand::rng();
+        let sign = rng.random::<bool>();
+        let deviation = dev.conf.deviation * 0.1 * rng.random::<f64>();
+        let val = match sign {
+            true => dev.val + deviation,
+            false => dev.val - deviation,
+        };
+        Self {
+            id: dev.id.to_owned(),
+            state: dev.state.to_owned(),
+            value: format!("{:.3}", val),
+            val,
+            conf: dev.conf.to_owned(),
+        }
+    }
 }
