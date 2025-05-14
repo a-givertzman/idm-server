@@ -1,5 +1,4 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use bincode::{Decode, Encode};
 use coco::Stack;
 use rand::Rng;
 use sal_core::dbg::Dbg;
@@ -43,52 +42,55 @@ impl DevStream {
 impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
     fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
         let error = Error::new("DevStream", "eval");
-        match link {
-            Some(link) => {
-                let dbg = self.dbg.clone();
-                let conf = self.conf.clone();
-                let exit = self.exit.clone();
-                log::warn!("{dbg}.run | Staring...");
-                let handle = self.scheduler.spawn(move || {
-                    let devices: Vec<Device> = conf.devices.iter().map(|(id, conf)| {
-                        Device::new(
-                            id.to_owned(),
-                            format!("On"),
-                            conf.value,
-                            conf.to_owned(),
-                        )
-                    }).collect();
-                    'main: loop {
-                        for dev in &devices {
-                            let dev = Device::from(dev);
-                            match serde_json::to_vec(&dev) {
-                                Ok(bytes) => {
-                                    if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes })) {
-                                        log::warn!("{dbg}.run | Send error: {:?}", err);
-                                    }
-                                },
-                                Err(err) => log::warn!("{dbg}.run | Json error: {:?}", err),
+        match self.is_active.load(Ordering::SeqCst) {
+            true => Ok(()),
+            false => match link {
+                Some(link) => {
+                    let dbg = self.dbg.clone();
+                    let conf = self.conf.clone();
+                    let exit = self.exit.clone();
+                    log::warn!("{dbg}.run | Staring...");
+                    let handle = self.scheduler.spawn(move || {
+                        let devices: Vec<Device> = conf.devices.iter().map(|(id, conf)| {
+                            Device::new(
+                                id.to_owned(),
+                                format!("On"),
+                                conf.value,
+                                conf.to_owned(),
+                            )
+                        }).collect();
+                        'main: loop {
+                            for dev in &devices {
+                                let dev = Device::from(dev);
+                                match serde_json::to_vec(&dev) {
+                                    Ok(bytes) => {
+                                        if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes })) {
+                                            log::warn!("{dbg}.run | Send error: {:?}", err);
+                                        }
+                                    },
+                                    Err(err) => log::warn!("{dbg}.run | Json error: {:?}", err),
+                                }
+                            }
+                            if exit.load(Ordering::SeqCst) {
+                                break 'main;
                             }
                         }
-                        if exit.load(Ordering::SeqCst) {
-                            break 'main;
-                        }
-                    }
-                    log::warn!("{dbg}.run | Exit");
-                    Ok(())
-                });
-                let dbg = self.dbg.clone();
-                let error = Error::new(&self.dbg, "run");
-                match handle {
-                    Ok(handle) => {
-                        self.handle.push(handle);
-                        log::warn!("{dbg}.run | Staring - Ok");
+                        log::warn!("{dbg}.run | Exit");
                         Ok(())
+                    });
+                    let dbg = self.dbg.clone();
+                    let error = Error::new(&self.dbg, "run");
+                    match handle {
+                        Ok(handle) => {
+                            self.handle.push(handle);
+                            log::warn!("{dbg}.run | Staring - Ok");
+                            Ok(())
+                        }
+                        Err(err) => Err(error.pass(err)),
                     }
-                    Err(err) => Err(error.pass(err)),
                 }
-            }
-            None => Err(error.err("Link is missing")),
+                None => Err(error.err("Link is missing")),
+            },
         }
     }
 }
