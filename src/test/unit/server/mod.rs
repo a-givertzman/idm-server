@@ -30,7 +30,7 @@ enum Command {
 /// Reply
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash, Encode, Decode)]
 struct Reply {
-    id: u32,
+    id: String,
     data: String,
     error: Option<String>,
 }

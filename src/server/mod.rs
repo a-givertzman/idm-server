@@ -14,7 +14,7 @@ pub(crate) use  select_req::*;
 pub(crate) use  connection_conf::*;
 pub(crate) use  connection::*;
 pub(crate) use  cot::*;
-use             event::*;
+pub(crate) use  event::*;
 use             reply::*;
 pub(crate) use  select_cot::*;
 pub(crate) use  server_conf::*;

@@ -132,7 +132,7 @@ mod select_cot {
         for (step, req, target) in test_data {
             let bytes = serde_json::to_vec(&req).unwrap();
             let val = BytesCtx {
-                id: DevId(step),
+                id: DevId(format!("{step}")),
                 bytes,
             };
             match req.cot {
@@ -144,7 +144,7 @@ mod select_cot {
                     let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let target = Some(Reply { id: step, data: target.to_owned(), error: None });
+                            let target = Some(Reply { id: format!("{step}"), data: target.to_owned(), error: None });
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -156,7 +156,7 @@ mod select_cot {
                     let result = select.eval((val, None));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let target = JsonCtx::new(DevId(step), json!(target));
+                            let target = JsonCtx::new(DevId(format!("{step}")), json!(target));
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),

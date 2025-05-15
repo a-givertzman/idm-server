@@ -1,6 +1,16 @@
 # Структуры
 
 
+## Общие описание
+
+- что-то общее о приложении
+- что-то общее о фронте
+- что-то общее о бэке
+
+- Система автоматического тестирования
+- Система логирования
+- Дистрибуция (сбока инсталляционных пакетов, установка на таргет ОС)
+- Требования к железу (фронт - андроид с камерой, бэк - стандартный средний современный сервер)
 
 ## Структура приложения
 
@@ -9,6 +19,20 @@ flowchart LR
     Idm-Client1["Idm-Client 1"] <-- "TCP Socket Messages" ----> Idm-Server
     Idm-Client_["Idm-Client .."] <-- "TCP Socket Messages" ----> Idm-Server
     Idm-Clientn["Idm-Client n"] <-- "TCP Socket Messages" ----> Idm-Server
+```
+
+## Поведенческая диаграмма
+
+```mermaid
+zenuml
+    title 
+    @Actor User
+    IdmClient
+    IdmServer
+    User -> IdmClient: 
+    IdmClient -> IdmServer: Cot.Act DevStream
+    IdmClient -> IdmServer: Cot.Req DevInfo
+    IdmClient -> IdmServer: Cot.Req DevDoc
 ```
 
 ## Диаграмма классов
@@ -89,10 +113,19 @@ classDiagram
     class SelectAct {
         +eval() Reply
     }
+    class SelectDevStream {
+        +eval() Reply
+    }
     SelectAct *-- SelectDevStream : Cmd.content
     SelectAct o.. Cmd.Kind : selects by
 
     class SelectReq {
+        +eval() Reply
+    }
+    class SelectDevInfo {
+        +eval() Reply
+    }
+    class SelectDevDoc {
         +eval() Reply
     }
     SelectReq *-- SelectDevInfo : Req.content
@@ -107,6 +140,7 @@ classDiagram
 
 **Пример конфигурации `config.yaml`:**
 
+// TODO: Add missed conf entities
 ```yaml 
 server:
     # Server socket address "IP:Port"

@@ -11,11 +11,11 @@ pub enum Request {
 /// Request for `DeviceInfo`
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceInfoRequest {
-    pub id: u32,
+    pub id: String,
 }
 ///
 /// Request for `DeviceInfo`
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceDocRequest {
-    pub id: u32,
+    pub id: String,
 }

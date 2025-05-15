@@ -36,9 +36,9 @@ mod device_info {
         let test_data = [
             (
                 01,
-                111,
+                format!("111"),
                 DeviceInfo::new(
-                    111,
+                    "111".into(),
                     "MAN01".into(),
                     "VEN01".into(),
                     "OC01".into(),
@@ -54,9 +54,9 @@ mod device_info {
             ),
             (
                 02,
-                222,
+                format!("222"),
                 DeviceInfo::new(
-                    222,
+                    "222".into(),
                     "MAN02".into(),
                     "VEN02".into(),
                     "OC02".into(),
@@ -72,9 +72,9 @@ mod device_info {
             ),
             (
                 03,
-                333,
+                format!("333"),
                 DeviceInfo::new(
-                    333,
+                    "333".into(),
                     "MAN03".into(),
                     "VEN03".into(),
                     "OC03".into(),

@@ -37,9 +37,9 @@ mod select_dev_info {
         let test_data = [
             (
                 01,
-                111,
+                format!("111"),
                 DeviceInfo::new(
-                    01,
+                    format!("01"),
                     "MAN01".into(),
                     "VEN01".into(),
                     "OC01".into(),
@@ -55,9 +55,9 @@ mod select_dev_info {
             ),
             (
                 02,
-                222,
+                format!("222"),
                 DeviceInfo::new(
-                    01,
+                    format!("02"),
                     "MAN02".into(),
                     "VEN02".into(),
                     "OC02".into(),
@@ -73,9 +73,9 @@ mod select_dev_info {
             ),
             (
                 03,
-                333,
+                format!("333"),
                 DeviceInfo::new(
-                    01,
+                    format!("03"),
                     "MAN03".into(),
                     "VEN03".into(),
                     "OC03".into(),
@@ -96,7 +96,7 @@ mod select_dev_info {
             )
         );
         for (step, id, target) in test_data {
-            let req = FakeRequest { data: DeviceInfoRequest { id } };
+            let req = FakeRequest { data: DeviceInfoRequest { id: id.clone() } };
             let val = MapCtx {
                 id: DevId(id),
                 map: json!(req).as_object().unwrap().to_owned(),
@@ -111,10 +111,10 @@ mod select_dev_info {
     ///
     /// Fake DeviceInfo for testing only
     pub struct FakeDeviceInfo {
-        val: IndexMap<u32, DeviceInfo>,
+        val: IndexMap<String, DeviceInfo>,
     }
     impl FakeDeviceInfo {
-        fn new(val: Vec<(u32, DeviceInfo)>) -> Self {
+        fn new(val: Vec<(String, DeviceInfo)>) -> Self {
             Self {
                 val: IndexMap::from_iter(val.into_iter().map(|(id, val)| (id, val))),
             }

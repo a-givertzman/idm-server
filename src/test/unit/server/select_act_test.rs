@@ -91,7 +91,7 @@ mod select_act {
         ]);
         for (step, req, target) in test_data {
             let val = MapCtx {
-                id: DevId(step),
+                id: DevId(format!("{step}")),
                 map: json!(req).as_object().unwrap().to_owned(),
             };
             let (loc, rem) = Link::split(&dbg);
@@ -101,7 +101,7 @@ mod select_act {
             let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
-                    let target = Some(Reply { id: step, data: target.to_owned(), error: None });
+                    let target = Some(Reply { id: format!("{step}"), data: target.to_owned(), error: None });
                     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 }
                 (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),

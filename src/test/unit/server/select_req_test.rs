@@ -90,13 +90,13 @@ mod select_req {
         ]);
         for (step, req, target) in test_data {
             let val = MapCtx {
-                id: DevId(step),
+                id: DevId(format!("{step}")),
                 map: json!(req).as_object().unwrap().to_owned(),
             };
             let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
-                    let target = JsonCtx::new(DevId(step), json!(target));
+                    let target = JsonCtx::new(DevId(format!("{step}")), json!(target));
                     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 }
                 (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
