@@ -1,17 +1,16 @@
-use crate::{domain::{Error, Eval, Link}, server::MapCtx};
-use super::{Reply, ReqData};
+use crate::{domain::{Error, Eval, JsonVal, Link}, server::MapCtx};
 
 ///
 /// Fake Req1 handler
 pub(crate) struct FakeSelectAct1 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectAct1 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -26,10 +25,12 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct1 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
+                                link.unwrap().send(
+                                    serde_json::to_string(&value).unwrap(),
+                                ).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),
@@ -48,14 +49,14 @@ unsafe impl Send for FakeSelectAct1 {}
 ///
 /// Fake Req2 handler
 pub(crate) struct FakeSelectAct2 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectAct2 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -70,10 +71,12 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct2 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
+                                link.unwrap().send(
+                                    serde_json::to_string(&value).unwrap(),
+                                ).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),
@@ -92,14 +95,14 @@ unsafe impl Send for FakeSelectAct2 {}
 ///
 /// Fake Req3 handler
 pub(crate) struct FakeSelectAct3 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectAct3 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -114,10 +117,12 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct3 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
+                                link.unwrap().send(
+                                    serde_json::to_string(&value).unwrap(),
+                                ).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),

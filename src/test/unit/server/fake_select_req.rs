@@ -1,18 +1,17 @@
 use serde_json::json;
-use crate::{domain::{Error, Eval}, server::{JsonCtx, MapCtx}};
-use super::ReqData;
+use crate::{domain::{Error, Eval, JsonVal}, server::{JsonCtx, MapCtx}};
 
 ///
 /// Fake Req1 handler
 pub(crate) struct FakeSelectReq1 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectReq1 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -27,8 +26,8 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq1 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
@@ -46,14 +45,14 @@ unsafe impl Send for FakeSelectReq1 {}
 ///
 /// Fake Req2 handler
 pub(crate) struct FakeSelectReq2 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectReq2 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -68,8 +67,8 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq2 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
@@ -87,14 +86,14 @@ unsafe impl Send for FakeSelectReq2 {}
 ///
 /// Fake Req3 handler
 pub(crate) struct FakeSelectReq3 {
-    ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
 }
 //
 //
 impl FakeSelectReq3 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -109,8 +108,8 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq3 {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
-                        let req: ReqData = data;
-                        match (self.ctx)(req.0) {
+                        let req: String = data;
+                        match (self.ctx)(req) {
                             Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }

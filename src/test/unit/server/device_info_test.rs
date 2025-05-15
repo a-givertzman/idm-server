@@ -92,7 +92,7 @@ mod device_info {
         let mut dev_info = DeviceInfo::from_path(path);
         for (step, id, target) in test_data {
             let result = dev_info.eval(DevId(id)).unwrap();
-            let result: DeviceInfo = serde_json::from_value(result.value).unwrap();
+            let result: DeviceInfo = serde_json::from_value(result).unwrap();
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);

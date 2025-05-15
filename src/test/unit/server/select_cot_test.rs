@@ -7,8 +7,8 @@ mod select_cot {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::{Eval, Link}, server::{BytesCtx, Cot, JsonCtx, SelectAct, SelectCot, SelectReq}};
-    use super::super::{Reply, fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}, ReqData};
+    use crate::{domain::{Eval, JsonVal, Link}, server::{BytesCtx, Cot, JsonCtx, SelectAct, SelectCot, SelectReq}};
+    use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,48 +37,57 @@ mod select_cot {
         let test_data = [
             (
                 01,
-                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Request1 01".into()), ..Default::default() },
-                Ok("Reply1 01"),
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req1", "data": "Request1 01" }),
+                Ok(json!({ "data": "Reply1 01" })),
             ),
             (
                 02,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Request2 02".into()), ..Default::default() },
-                Ok("Reply2 02"),
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req2", "data": "Request2 02" }),
+                Ok(json!({ "data": "Reply2 02" })),
             ),
             (
                 03,
-                FakeRequest { cot: Cot::Req, req: Request::Req3, data: ReqData("Request3 03".into()), ..Default::default() },
-                Ok("Reply3 03"),
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req3", "data": "Request3 03" }),
+                Ok(json!({ "data": "Reply3 03" })),
             ),
             (
                 04,
-                FakeRequest { cot: Cot::Req, req: Request::Req1, data: ReqData("Error 04".into()), ..Default::default() },
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req1", "data": "Error 04" }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 05".into()), ..Default::default() },
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req2", "data": "Error 05" }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                FakeRequest { cot: Cot::Req, req: Request::Req2, data: ReqData("Error 06".into()), ..Default::default() },
+                Cot::Req,
+                json!({ "cot": Cot::Req, "req": "Req3", "data": "Error 06" }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
             (
                 07,
-                FakeRequest { cot: Cot::Act, act: Command::Cmd1, data: ReqData("Command1 07".into()), ..Default::default() },
-                Ok("CmdReply1 07"),
+                Cot::Act,
+                json!({ "cot": Cot::Act, "act": "Cmd1", "data": "Command1 07" }),
+                Ok(json!({ "data": "CmdReply1 07" })),
             ),
             (
                 08,
-                FakeRequest { cot: Cot::Act, act: Command::Cmd2, data: ReqData("Command2 08".into()), ..Default::default() },
-                Ok("CmdReply2 08"),
+                Cot::Act,
+                json!({ "cot": Cot::Act, "act": "Cmd2", "data": "Command2 08" }),
+                Ok(json!({ "data": "CmdReply2 08" })),
             ),
             (
                 09,
-                FakeRequest { cot: Cot::Act, act: Command::Cmd3, data: ReqData("Command3 09".into()), ..Default::default() },
-                Ok("CmdReply3 09"),
+                Cot::Act,
+                json!({ "cot": Cot::Act, "act": "Cmd3", "data": "Command3 09" }),
+                Ok(json!({ "data": "CmdReply3 09" })),
             ),
         ];
         let mut select = SelectCot::new(vec![
@@ -87,21 +96,21 @@ mod select_cot {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct1", "").err(request));
                     }
-                    let reply = request.replace("Command1", "CmdReply1");
+                    let reply = json!({"data": request.replace("Command1", "CmdReply1")});
                     Ok(reply)
                 }))),
                 (Command::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct2", "").err(request));
                     }
-                    let reply = request.replace("Command2", "CmdReply2");
+                    let reply = json!({"data": request.replace("Command2", "CmdReply2")});
                     Ok(reply)
                 }))),
                 (Command::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct3", "").err(request));
                     }
-                    let reply = request.replace("Command3", "CmdReply3");
+                    let reply = json!({"data": request.replace("Command3", "CmdReply3")});
                     Ok(reply)
                 }))),
             ]))),
@@ -110,41 +119,41 @@ mod select_cot {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request1", "Reply1");
+                    let reply = json!({"data": request.replace("Request1", "Reply1")});
                     Ok(reply)
                 }))),
                 (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request2", "Reply2");
+                    let reply = json!({"data": request.replace("Request2", "Reply2")});
                     Ok(reply)
                 }))),
                 (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = request.replace("Request3", "Reply3");
+                    let reply = json!({"data": request.replace("Request3", "Reply3")});
                     Ok(reply)
                 }))),
             ]))),
         ]);
-        for (step, req, target) in test_data {
+        for (step, req_cot, req, target) in test_data {
             let bytes = serde_json::to_vec(&req).unwrap();
             let val = BytesCtx {
-                msg_id: DevId(format!("{step}")),
+                msg_id: step,
                 bytes,
             };
-            match req.cot {
+            match req_cot {
                 Cot::Act => {
                     let (loc, rem) = Link::split(&dbg);
                     let select_result = select.eval((val, Some(rem)));
                     let select_target = Ok(JsonCtx::empty());
                     assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
-                    let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
+                    let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let target = Some(Reply { id: format!("{step}"), data: target.to_owned(), error: None });
+                            let result: JsonVal = serde_json::from_str(&result.unwrap()).unwrap();
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -156,7 +165,7 @@ mod select_cot {
                     let result = select.eval((val, None));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let target = JsonCtx::new(DevId(format!("{step}")), json!(target));
+                            let result = result.value;
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -164,31 +173,12 @@ mod select_cot {
                         (Err(_), Err(_)) => {}
                     }
                 }
-                _ => panic!("step {step} Unexpected cot {:?}", req.cot)
+                _ => panic!("step {step} Unexpected cot {:?} in the test_data", req_cot)
             }
             
         }
         // assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
         test_duration.exit();
-    }
-    ///
-    /// Fake Request
-    #[derive(Debug, Serialize, Deserialize)]
-    struct FakeRequest {
-        cot: Cot,
-        act: Command,
-        req: Request,
-        data: ReqData
-    }
-    impl Default for FakeRequest {
-        fn default() -> Self {
-        Self {
-            cot: Cot::Inf,
-            act: Command::None,
-            req: Request::None,
-            data: ReqData(String::new()),
-        }
-    }
     }
     ///
     /// Fake List of API requiests

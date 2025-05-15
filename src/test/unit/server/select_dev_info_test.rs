@@ -4,11 +4,10 @@ mod select_dev_info {
     use std::{sync::Once, time::Duration};
     use indexmap::IndexMap;
     use sal_core::{dbg::Dbg, error::Error};
-    use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{DeviceInfoRequest, MapCtx, SelectDevInfo}};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{MapCtx, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -144,11 +143,5 @@ mod select_dev_info {
                 None => Err(error.err(format!("id {} - is not found in the test_data", id.0))),
             }
         }
-    }
-    ///
-    /// Fake Request
-    #[derive(Debug, Serialize, Deserialize)]
-    struct FakeRequest {
-        data: DeviceInfoRequest
     }
 }
