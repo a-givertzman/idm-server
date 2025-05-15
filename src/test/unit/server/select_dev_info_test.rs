@@ -8,7 +8,7 @@ mod select_dev_info {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::Eval, server::{DeviceInfoRequest, JsonCtx, MapCtx, SelectDevInfo}};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{DeviceInfoRequest, JsonCtx, MapCtx, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,9 +37,9 @@ mod select_dev_info {
         let test_data = [
             (
                 01,
-                format!("111"),
+                111,
                 DeviceInfo::new(
-                    format!("01"),
+                    format!("111"),
                     "MAN01".into(),
                     "VEN01".into(),
                     "OC01".into(),
@@ -55,9 +55,9 @@ mod select_dev_info {
             ),
             (
                 02,
-                format!("222"),
+                222,
                 DeviceInfo::new(
-                    format!("02"),
+                    format!("222"),
                     "MAN02".into(),
                     "VEN02".into(),
                     "OC02".into(),
@@ -73,9 +73,9 @@ mod select_dev_info {
             ),
             (
                 03,
-                format!("333"),
+                {"devId": 333},
                 DeviceInfo::new(
-                    format!("03"),
+                    format!("333"),
                     "MAN03".into(),
                     "VEN03".into(),
                     "OC03".into(),
@@ -92,13 +92,13 @@ mod select_dev_info {
         ];
         let mut select_dev_info = SelectDevInfo::new(
             FakeDeviceInfo::new(
-                test_data.clone().map(|(_, id, val)| (id, val)).into(),
+                test_data.clone().map(|(_, _, val)| val).into(),
             )
         );
-        for (step, id, target) in test_data {
-            let req = FakeRequest { data: DeviceInfoRequest { id: id.clone() } };
+        for (step, msg_id, target) in test_data {
+            let req = FakeRequest { data: DeviceInfoRequest { dev_id: format!("{msg_id}") } };
             let val = MapCtx {
-                id: DevId(id),
+                msg_id,
                 map: json!(req).as_object().unwrap().to_owned(),
             };
             let result = select_dev_info.eval(val).unwrap();
@@ -114,19 +114,19 @@ mod select_dev_info {
         val: IndexMap<String, DeviceInfo>,
     }
     impl FakeDeviceInfo {
-        fn new(val: Vec<(String, DeviceInfo)>) -> Self {
+        fn new(val: Vec<DeviceInfo>) -> Self {
             Self {
-                val: IndexMap::from_iter(val.into_iter().map(|(id, val)| (id, val))),
+                val: IndexMap::from_iter(val.into_iter().map(|(val)| (val.id.clone(), val))),
             }
         }
     }
     //
     //
-    impl Eval<DevId, Result<JsonCtx, Error>> for FakeDeviceInfo {
-        fn eval(&mut self, id: DevId) -> Result<JsonCtx, Error> {
+    impl Eval<DevId, Result<JsonVal, Error>> for FakeDeviceInfo {
+        fn eval(&mut self, id: DevId) -> Result<JsonVal, Error> {
         let error = Error::new("FakeDeviceInfo", "eval");
             match self.val.get(&(id.0)) {
-                Some(val) => Ok(JsonCtx::new(id, json!(val))),
+                Some(val) => Ok(json!(val)),
                 None => Err(error.err(format!("id {} - is not found in the test_data", id.0))),
             }
         }

@@ -37,6 +37,17 @@ impl DevStream {
         }
     }
     ///
+    /// Wait for inner thread being finished
+    pub fn wait(&self) -> Result<(), Error> {
+        match self.handle.pop() {
+            Some(h) => {
+                let error = Error::new("DevStream", "wait");
+                h.join().map_err(|err| error.pass(err))
+            }
+            _ => Ok(()),
+        }
+    }
+    ///
     /// Send exit signal to the spawned thread
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
@@ -69,7 +80,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                                 let dev = Device::from(dev);
                                 match serde_json::to_vec(&dev) {
                                     Ok(bytes) => {
-                                        if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0.parse().unwrap(), bytes })) {
+                                        if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.msg_id, bytes })) {
                                             log::warn!("{dbg}.run | Send error: {:?}", err);
                                         }
                                     },

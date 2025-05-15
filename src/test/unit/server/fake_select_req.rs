@@ -29,7 +29,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq1 {
                     Ok(data) => {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
-                            Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
+                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
@@ -70,7 +70,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq2 {
                     Ok(data) => {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
-                            Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
+                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
@@ -111,7 +111,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq3 {
                     Ok(data) => {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
-                            Ok(value) => Ok(JsonCtx::new(input.id, json!(value))),
+                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }

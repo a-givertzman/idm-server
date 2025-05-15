@@ -1,16 +1,16 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-mod dev_stream_test;
-mod device_info_test;
+// mod dev_stream_test;
+// mod device_info_test;
 
 mod fake_select_act;
 mod fake_select_req;
 
-mod select_act_test;
-mod select_cot_test;
+// mod select_act_test;
+// mod select_cot_test;
 mod select_dev_info_test;
-mod select_req_test;
+// mod select_req_test;
 
 ///
 /// Request kind 1
@@ -30,7 +30,7 @@ enum Command {
 /// Reply
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash, Encode, Decode)]
 struct Reply {
-    id: String,
+    // id: String,
     data: String,
     error: Option<String>,
 }

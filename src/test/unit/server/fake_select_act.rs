@@ -29,7 +29,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct1 {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
+                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),
@@ -73,7 +73,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct2 {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
+                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),
@@ -117,7 +117,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct3 {
                         let req: ReqData = data;
                         match (self.ctx)(req.0) {
                             Ok(value) => {
-                                link.unwrap().send(Reply { id: input.id.0, data: value, error: None }).unwrap();
+                                link.unwrap().send(Reply { data: value, error: None }).unwrap();
                                 Ok(())
                             }
                             Err(err) => Err(error.pass(err.to_string())),

@@ -1,0 +1,1 @@
+pub type JsonVal = serde_json::Value;

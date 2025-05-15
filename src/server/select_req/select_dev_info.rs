@@ -1,4 +1,4 @@
-use crate::{device_info::DevId, domain::{Error, Eval}};
+use crate::{device_info::DevId, domain::{Error, Eval, JsonVal}};
 use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
 
 ///
@@ -6,14 +6,14 @@ use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceInfo]
 pub(crate) struct SelectDevInfo {
-    ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
+    ctx: Box<dyn Eval<DevId, Result<JsonVal, Error>> + Send>,
 }
 //
 //
 impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Eval<DevId, Result<JsonCtx, Error>> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Eval<DevId, Result<JsonVal, Error>> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -29,8 +29,8 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
                         let req: DeviceInfoRequest = data;
-                        match self.ctx.eval(DevId(req.id.to_string())) {
-                            Ok(value) => Ok(value),
+                        match self.ctx.eval(DevId(req.dev_id.to_string())) {
+                            Ok(value) => Ok(JsonCtx::new(input.msg_id, value)),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }

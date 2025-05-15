@@ -132,7 +132,7 @@ mod select_cot {
         for (step, req, target) in test_data {
             let bytes = serde_json::to_vec(&req).unwrap();
             let val = BytesCtx {
-                id: DevId(format!("{step}")),
+                msg_id: DevId(format!("{step}")),
                 bytes,
             };
             match req.cot {

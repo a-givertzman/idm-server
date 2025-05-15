@@ -9,7 +9,7 @@
         "cot": "Req",
         "req": "DeviceInfo"
         "data": {
-            "id": 111
+            "devId": 111
         }
     }
 ```
@@ -45,7 +45,7 @@
         "cot": "Req",
         "req": "DeviceDoc",
         "data": {
-            "id": 111
+            "devId": 111
         }
     }
 ```

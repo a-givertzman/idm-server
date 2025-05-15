@@ -57,8 +57,8 @@ mod dev_stream {
         let mut dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
         let (loc, rem) = Link::split(&dbg);
         let val = MapCtx {
-            id: DevId(String::new()),
-            map: json!("{}").as_object().unwrap().to_owned(),
+            msg_id: DevId(String::new()),
+            map: json!({"empty": ""}).as_object().unwrap().to_owned(),
         };
         dev_stream.eval((val, Some(rem))).unwrap();
         let mut results = HashMap::new();
@@ -72,15 +72,19 @@ mod dev_stream {
                         log::debug!("dev {}", dev.id);
                         results.insert(dev.id.clone(), dev);
                     }
-                    None => {}
+                    None => {
+                        panic!("Empty event - Receive timeout");
+                    }
                 }
                 Err(err) => {
-
+                    log::warn!("recv error {:?}", err);
+                    break;
                 }
             }
+            if results.len() >= 3 { break };
         }
-        for (id, conf) in conf.devices {
-        }
+        // for (id, conf) in conf.devices {
+        // }
         // for (step, req, target) in test_data {
         //     let val = MapCtx {
         //         id: DevId(step.to_string()),
@@ -101,7 +105,9 @@ mod dev_stream {
         //         (Err(_), Err(_)) => {}
         //     }
         // }
+        // std::thread::sleep(Duration::from_millis(300));
         dev_stream.exit();
+        dev_stream.wait().unwrap();
         test_duration.exit();
     }
     ///

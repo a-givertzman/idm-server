@@ -91,7 +91,7 @@ mod select_act {
         ]);
         for (step, req, target) in test_data {
             let val = MapCtx {
-                id: DevId(format!("{step}")),
+                msg_id: DevId(format!("{step}")),
                 map: json!(req).as_object().unwrap().to_owned(),
             };
             let (loc, rem) = Link::split(&dbg);

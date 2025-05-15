@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use crate::domain::{Error, Eval, Link};
+use crate::domain::{Error, Eval, JsonVal, Link};
 use super::{BytesCtx, Cot, JsonCtx, MapCtx};
 ///
 /// Matching incoming messages by it's Cot
@@ -30,7 +30,7 @@ impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> for SelectCot {
         let error = Error::new("SelectCot", "eval");
         match serde_json::from_slice(&input.bytes) {
             Ok(value) => {
-                let value: serde_json::Value = value;
+                let value: JsonVal = value;
                 match value.as_object() {
                     Some(map) => {
                         match map.get("cot") {
@@ -40,8 +40,8 @@ impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> for SelectCot {
                                         match self.select.get_mut(&cot) {
                                             Some(eval) => {
                                                 match cot {
-                                                    Cot::Act => eval.eval((MapCtx { map: map.to_owned(), id: input.id }, link)),
-                                                    Cot::Req => eval.eval((MapCtx { map: map.to_owned(), id: input.id }, None)),
+                                                    Cot::Act => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, link)),
+                                                    Cot::Req => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, None)),
                                                     _ => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                                 }
                                             },

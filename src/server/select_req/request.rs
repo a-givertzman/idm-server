@@ -11,7 +11,8 @@ pub enum Request {
 /// Request for `DeviceInfo`
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceInfoRequest {
-    pub id: String,
+    #[serde(rename="devId")]
+    pub dev_id: String,
 }
 ///
 /// Request for `DeviceInfo`

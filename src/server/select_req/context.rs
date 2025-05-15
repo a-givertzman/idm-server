@@ -1,35 +1,35 @@
 use api_tools::api::message::message::Bytes;
-use crate::device_info::DevId;
+use crate::domain::JsonVal;
 
 ///
 /// Contains message's `id` & `bytes`
 pub struct BytesCtx {
-    pub id: DevId,
+    pub msg_id: u32,
     pub bytes: Bytes,
 }
 ///
-/// Contains message's `id` & `serde_json::Value`
+/// Contains message's `id` & `JsonVal`
 #[derive(Debug, PartialEq)]
 pub struct JsonCtx {
-    pub id: DevId,
-    pub value: serde_json::Value,
+    pub msg_id: u32,
+    pub value: JsonVal,
     pub is_empty: bool,
 }
 impl JsonCtx {
-    pub fn new(id: DevId, value: serde_json::Value) -> Self {
-        Self { id, value, is_empty: false }
+    pub fn new(id: u32, value: JsonVal) -> Self {
+        Self { msg_id: id, value, is_empty: false }
     }
     pub fn empty() -> Self {
         Self {
-            id: DevId("".to_owned()),
-            value: serde_json::Value::Null,
+            msg_id: 0,
+            value: JsonVal::Null,
             is_empty: true,
         }
     }
 }
 ///
-/// Contains message's `id` & `Map<String, serde_json::Value>`
+/// Contains message's `id` & `Map<String, JsonVal>`
 pub struct MapCtx {
-    pub id: DevId,
-    pub map: serde_json::Map<String, serde_json::Value>,
+    pub msg_id: u32,
+    pub map: serde_json::Map<String, JsonVal>,
 }

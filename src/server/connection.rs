@@ -8,8 +8,7 @@ use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::thread_pool::{Scheduler, JoinHandle};
 use crate::{
-    device_info::DevId,
-    domain::{Eval, Hub, Link, TcpMessage}, server::ConnectionConf
+    domain::{Eval, Hub, JsonVal, Link, TcpMessage}, server::ConnectionConf
 };
 use super::{BytesCtx, Event, JsonCtx, Reply};
 
@@ -120,20 +119,18 @@ impl Connection {
                             Ok((msg_id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(msg_id.0.to_string()) }, Some(hub.link()))) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, msg_id: msg_id.0 }, Some(hub.link()))) {
                                             Ok(reply) => {
                                                 match reply.is_empty {
                                                     true => None,
                                                     false => Some(Reply {
-                                                        id: reply.id.0.parse().unwrap(),
                                                         data: reply.value,
                                                         error: None,
                                                     }),
                                                 }
                                             }
                                             Err(err) => Some(Reply {
-                                                id: msg_id.0,
-                                                data: serde_json::Value::Null,
+                                                data: JsonVal::Null,
                                                 error: Some(super::ReplyError {
                                                     message: error.pass(err).to_string()
                                                 }),
