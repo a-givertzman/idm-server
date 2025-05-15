@@ -120,12 +120,12 @@ impl Connection {
                             Ok((msg_id, kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(msg_id.0) }, Some(hub.link()))) {
+                                        let reply = match ctx.eval((BytesCtx { bytes, id: DevId(msg_id.0.to_string()) }, Some(hub.link()))) {
                                             Ok(reply) => {
                                                 match reply.is_empty {
                                                     true => None,
                                                     false => Some(Reply {
-                                                        id: reply.id.0,
+                                                        id: reply.id.0.parse().unwrap(),
                                                         data: reply.value,
                                                         error: None,
                                                     }),

@@ -36,6 +36,11 @@ impl DevStream {
             exit: Arc::new(AtomicBool::new(false)),
         }
     }
+    ///
+    /// Send exit signal to the spawned thread
+    pub fn exit(&self) {
+        self.exit.store(true, Ordering::SeqCst);
+    }
 }
 //
 //
@@ -64,7 +69,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                                 let dev = Device::from(dev);
                                 match serde_json::to_vec(&dev) {
                                     Ok(bytes) => {
-                                        if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0, bytes })) {
+                                        if let Err(err) = link.send(Ok::<_, Error>(Event { msg_id: input.id.0.parse().unwrap(), bytes })) {
                                             log::warn!("{dbg}.run | Send error: {:?}", err);
                                         }
                                     },

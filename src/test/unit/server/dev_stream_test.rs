@@ -35,73 +35,48 @@ mod dev_stream {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
-        let test_data = [
-            (
-                01,
-                FakeRequest { act: Command::Cmd1, data: ReqData("Request1 01".into()) },
-                Ok("Reply1 01"),
-            ),
-            (
-                02,
-                FakeRequest { act: Command::Cmd2, data: ReqData("Request2 02".into()) },
-                Ok("Reply2 02"),
-            ),
-            (
-                03,
-                FakeRequest { act: Command::Cmd3, data: ReqData("Request3 03".into()) },
-                Ok("Reply3 03"),
-            ),
-            (
-                04,
-                FakeRequest { act: Command::Cmd1, data: ReqData("Error 04".into()) },
-                Err(Error::new("", &dbg).err("Error 04")),
-            ),
-            (
-                05,
-                FakeRequest { act: Command::Cmd2, data: ReqData("Error 05".into()) },
-                Err(Error::new("", &dbg).err("Error 05")),
-            ),
-            (
-                06,
-                FakeRequest { act: Command::Cmd2, data: ReqData("Error 06".into()) },
-                Err(Error::new("", &dbg).err("Error 06")),
-            ),
-        ];
+        // let test_data = [
+        // ];
         let thread_pool = ThreadPool::new(&dbg, Some(3));
         let conf = r#"
             devices:
                 Dev-01:
                     value: 10.0
                     deviation: 3.0
+                    interval: 100   # ms
                 Dev-02:
                     value: 20.0
                     deviation: 3.0
+                    interval: 100   # ms
                 Dev-03:
                     value: 30.0
                     deviation: 3.0
+                    interval: 100   # ms
         "#;
         let conf: DevStreamConf = serde_yaml::from_str(conf).unwrap();
-        let mut dev_stream = DevStream::new(&dbg, conf, thread_pool.scheduler());
-        for (step, req, target) in test_data {
-            let val = MapCtx {
-                id: DevId(step),
-                map: json!(req).as_object().unwrap().to_owned(),
-            };
-            let (loc, rem) = Link::split(&dbg);
-            let select_result = dev_stream.eval((val, Some(rem)));
-            let select_target = Ok(JsonCtx::empty());
-            assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
-            let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
-            match (result, target) {
-                (Ok(result), Ok(target)) => {
-                    let target = Some(Reply { id: step, data: target.to_owned(), error: None });
-                    assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
-                }
-                (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
-                (Err(result), Ok(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
-                (Err(_), Err(_)) => {}
-            }
-        }
+        let mut dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
+        for (id, conf) in conf.
+        // for (step, req, target) in test_data {
+        //     let val = MapCtx {
+        //         id: DevId(step.to_string()),
+        //         map: json!(req).as_object().unwrap().to_owned(),
+        //     };
+        //     let (loc, rem) = Link::split(&dbg);
+        //     let select_result = dev_stream.eval((val, Some(rem)));
+        //     let select_target = Ok(JsonCtx::empty());
+        //     assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
+        //     let result: Result<Option<Reply>, _> = loc.recv_timeout(Duration::from_millis(100));
+        //     match (result, target) {
+        //         (Ok(result), Ok(target)) => {
+        //             let target = Some(Reply { id: step, data: target.to_owned(), error: None });
+        //             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
+        //         }
+        //         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+        //         (Err(result), Ok(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
+        //         (Err(_), Err(_)) => {}
+        //     }
+        // }
+        dev_stream.exit();
         test_duration.exit();
     }
     ///

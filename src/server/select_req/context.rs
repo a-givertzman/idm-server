@@ -21,7 +21,7 @@ impl JsonCtx {
     }
     pub fn empty() -> Self {
         Self {
-            id: DevId(0),
+            id: DevId("".to_owned()),
             value: serde_json::Value::Null,
             is_empty: true,
         }

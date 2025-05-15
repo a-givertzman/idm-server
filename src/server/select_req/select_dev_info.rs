@@ -29,7 +29,7 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
                         let req: DeviceInfoRequest = data;
-                        match self.ctx.eval(DevId(req.id)) {
+                        match self.ctx.eval(DevId(req.id.to_string())) {
                             Ok(value) => Ok(value),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
