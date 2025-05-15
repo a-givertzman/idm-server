@@ -225,12 +225,12 @@ impl Link {
         let error = Error::new(&self.name, "recv_timeout");
         match self.recv.pop() {
             Some(recv) => match recv.recv_timeout(duration) {
-                Ok(query) => {
+                Ok(event) => {
                     self.recv.push(recv);
-                    match bincode::decode_from_slice(&query, self.bincode_config) {
-                        Ok((query, _)) => {
-                            log::trace!("{}.try_recv | Received query: {:#?}", self.name, query);
-                            return Ok(Some(query))
+                    match bincode::decode_from_slice(&event, self.bincode_config) {
+                        Ok((event, _)) => {
+                            log::trace!("{}.try_recv | Received event: {:#?}", self.name, event);
+                            return Ok(Some(event))
                         }
                         Err(err) => Err(
                             error.pass_with("Decode error", err.to_string()),

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-// mod dev_stream_test;
+mod dev_stream_test;
 mod device_info_test;
 
 mod fake_select_act;

@@ -1,5 +1,5 @@
 use std::time::Duration;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 ///
 /// The `DevStream`'s configuration
@@ -7,7 +7,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub struct DevConf {
     pub value: f64,
     pub deviation: f64,
-    #[serde(deserialize_with = "DevConf::interval")]
+    #[serde(serialize_with = "DevConf::serialize_interval")]
+    #[serde(deserialize_with = "DevConf::de_interval")]
     pub interval: Duration,
 }
 //
@@ -16,7 +17,8 @@ impl DevConf {
     const DEFAULT_INTERVAL: Duration = Duration::from_millis(100);
     ///
     /// Used to deserialize `interval`
-    fn interval<'de, D>(deserializer: D) -> Result<Duration, D::Error> where D: Deserializer<'de> {
+    fn de_interval<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where D: Deserializer<'de> {
         match Deserialize::deserialize(deserializer) {
             Ok(val) => {
                 let val: Option<u64> = val;
@@ -33,5 +35,12 @@ impl DevConf {
                 Ok(Self::DEFAULT_INTERVAL)
             }
         }
+    }
+    ///
+    /// 
+    fn serialize_interval<S>(val: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer {
+        serializer.serialize_u64(val.as_millis() as u64)
     }
 }
