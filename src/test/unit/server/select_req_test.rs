@@ -7,7 +7,7 @@ mod select_req {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::DevId, domain::Eval, server::{JsonCtx, MapCtx, SelectReq}};
+    use crate::{domain::{Eval, JsonVal}, server::{JsonCtx, MapCtx, SelectReq}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -36,32 +36,32 @@ mod select_req {
         let test_data = [
             (
                 01,
-                FakeRequest { req: Request::Req1, data: ReqData("Request1 01".into()) },
-                Ok("Reply1 01"),
+                json!({ "req": "Req1", "data": "Request1 01" }),
+                Ok(json!({ "data": "Reply1 01" })),
             ),
             (
                 02,
-                FakeRequest { req: Request::Req2, data: ReqData("Request2 02".into()) },
-                Ok("Reply2 02"),
+                json!({ "req": "Req2", "data": "Request2 02" }),
+                Ok(json!({ "data": "Reply2 02" })),
             ),
             (
                 03,
-                FakeRequest { req: Request::Req3, data: ReqData("Request3 03".into()) },
-                Ok("Reply3 03"),
+                json!({ "req": "Req3", "data": "Request3 03" }),
+                Ok(json!({ "data": "Reply3 03" })),
             ),
             (
                 04,
-                FakeRequest { req: Request::Req1, data: ReqData("Error 04".into()) },
+                json!({ "req": "Req1", "data": "Error 04" }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                FakeRequest { req: Request::Req2, data: ReqData("Error 05".into()) },
+                json!({ "req": "Req2", "data": "Error 05" }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                FakeRequest { req: Request::Req2, data: ReqData("Error 06".into()) },
+                json!({ "req": "Req2", "data": "Error 06" }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
@@ -70,33 +70,33 @@ mod select_req {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
-                let reply = request.replace("Request1", "Reply1");
+                let reply = json!({"data": request.replace("Request1", "Reply1")});
                 Ok(reply)
             }))),
             (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
-                let reply = request.replace("Request2", "Reply2");
+                let reply = json!({"data": request.replace("Request2", "Reply2")});
                 Ok(reply)
             }))),
             (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
-                let reply = request.replace("Request3", "Reply3");
+                let reply = json!({"data": request.replace("Request3", "Reply3")});
                 Ok(reply)
             }))),
         ]);
         for (step, req, target) in test_data {
             let val = MapCtx {
-                msg_id: DevId(format!("{step}")),
-                map: json!(req).as_object().unwrap().to_owned(),
+                msg_id: step,
+                map: req.as_object().unwrap().to_owned(),
             };
             let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
-                    let target = JsonCtx::new(DevId(format!("{step}")), json!(target));
+                    let result = result.value;
                     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 }
                 (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -106,17 +106,6 @@ mod select_req {
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         test_duration.exit();
-    }
-    ///
-    /// Request kind 1
-    #[derive(Debug, Serialize, Deserialize)]
-    struct ReqData(pub String);
-    ///
-    /// Fake Request
-    #[derive(Debug, Serialize, Deserialize)]
-    struct FakeRequest {
-        req: Request,
-        data: ReqData
     }
     ///
     /// Fake List of API requiests
@@ -129,14 +118,14 @@ mod select_req {
     ///
     /// Fake Req1 handler
     pub(crate) struct FakeSelectReq1 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+        ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
     }
     //
     //
     impl FakeSelectReq1 {
         ///
         /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+        pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
             Self {
                 ctx: Box::new(ctx),
             }
@@ -151,8 +140,8 @@ mod select_req {
                 Some(cot) => {
                     match serde_json::from_value(cot.to_owned()) {
                         Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
+                            let req: String = data;
+                            match (self.ctx)(req) {
                                 Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }
@@ -170,14 +159,14 @@ mod select_req {
     ///
     /// Fake Req2 handler
     pub(crate) struct FakeSelectReq2 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+        ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
     }
     //
     //
     impl FakeSelectReq2 {
         ///
         /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+        pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
             Self {
                 ctx: Box::new(ctx),
             }
@@ -192,8 +181,8 @@ mod select_req {
                 Some(cot) => {
                     match serde_json::from_value(cot.to_owned()) {
                         Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
+                            let req: String = data;
+                            match (self.ctx)(req) {
                                 Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }
@@ -211,14 +200,14 @@ mod select_req {
     ///
     /// Fake Req3 handler
     pub(crate) struct FakeSelectReq3 {
-        ctx: Box<dyn Fn(String) -> Result<String, Error> + Send>,
+        ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
     }
     //
     //
     impl FakeSelectReq3 {
         ///
         /// Returns [SortByX] new instance
-        pub fn new(ctx: impl Fn(String) -> Result<String, Error> + Send + 'static) -> Self {
+        pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
             Self {
                 ctx: Box::new(ctx),
             }
@@ -233,8 +222,8 @@ mod select_req {
                 Some(cot) => {
                     match serde_json::from_value(cot.to_owned()) {
                         Ok(data) => {
-                            let req: ReqData = data;
-                            match (self.ctx)(req.0) {
+                            let req: String = data;
+                            match (self.ctx)(req) {
                                 Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
                                 Err(err) => Err(error.pass(err.to_string())),
                             }

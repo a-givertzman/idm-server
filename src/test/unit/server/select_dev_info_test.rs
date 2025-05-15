@@ -8,7 +8,7 @@ mod select_dev_info {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{DeviceInfoRequest, JsonCtx, MapCtx, SelectDevInfo}};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{DeviceInfoRequest, MapCtx, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -37,72 +37,84 @@ mod select_dev_info {
         let test_data = [
             (
                 01,
-                111,
-                DeviceInfo::new(
-                    format!("111"),
-                    "MAN01".into(),
-                    "VEN01".into(),
-                    "OC01".into(),
-                    "MOD01".into(),
-                    "SER01".into(),
-                    "NAM01".into(),
-                    "DESC01".into(),
-                    "W01".into(),
-                    "H01".into(),
-                    "DEP01".into(),
-                    "WEI01".into()
-                ),
+                "Device-111",
+                json!({"data": {"devId": "Device-111"}}),
+                json!({
+                    "cot": "req",
+                    "data": DeviceInfo::new(
+                        "Device-111".into(),
+                        "MAN01".into(),
+                        "VEN01".into(),
+                        "OC01".into(),
+                        "MOD01".into(),
+                        "SER01".into(),
+                        "NAM01".into(),
+                        "DESC01".into(),
+                        "W01".into(),
+                        "H01".into(),
+                        "DEP01".into(),
+                        "WEI01".into()
+                    ),
+                }),
             ),
             (
                 02,
-                222,
-                DeviceInfo::new(
-                    format!("222"),
-                    "MAN02".into(),
-                    "VEN02".into(),
-                    "OC02".into(),
-                    "MOD02".into(),
-                    "SER02".into(),
-                    "NAM02".into(),
-                    "DESC02".into(),
-                    "W02".into(),
-                    "H02".into(),
-                    "DEP02".into(),
-                    "WEI02".into()
-                ),
+                "Device-222",
+                json!({"data": {"devId": "Device-222"}}),
+                json!({
+                    "cot": "req",
+                    "data": DeviceInfo::new(
+                        "Device-222".into(),
+                        "MAN02".into(),
+                        "VEN02".into(),
+                        "OC02".into(),
+                        "MOD02".into(),
+                        "SER02".into(),
+                        "NAM02".into(),
+                        "DESC02".into(),
+                        "W02".into(),
+                        "H02".into(),
+                        "DEP02".into(),
+                        "WEI02".into()
+                    ),
+                }),
+                
             ),
             (
                 03,
-                {"devId": 333},
-                DeviceInfo::new(
-                    format!("333"),
-                    "MAN03".into(),
-                    "VEN03".into(),
-                    "OC03".into(),
-                    "MOD03".into(),
-                    "SER03".into(),
-                    "NAM03".into(),
-                    "DESC03".into(),
-                    "W03".into(),
-                    "H03".into(),
-                    "DEP03".into(),
-                    "WEI03".into()
-                ),
+                "Device-333",
+                json!({"data": {"devId": "Device-333"}}),
+                json!({
+                    "cot": "req",
+                    "data": DeviceInfo::new(
+                        "Device-333".into(),
+                        "MAN03".into(),
+                        "VEN03".into(),
+                        "OC03".into(),
+                        "MOD03".into(),
+                        "SER03".into(),
+                        "NAM03".into(),
+                        "DESC03".into(),
+                        "W03".into(),
+                        "H03".into(),
+                        "DEP03".into(),
+                        "WEI03".into()
+                    ),
+                }),
+                    
             ),
         ];
         let mut select_dev_info = SelectDevInfo::new(
             FakeDeviceInfo::new(
-                test_data.clone().map(|(_, _, val)| val).into(),
+                test_data.clone().map(|(_, dev_id, _, val)| (dev_id, val)).into(),
             )
         );
-        for (step, msg_id, target) in test_data {
-            let req = FakeRequest { data: DeviceInfoRequest { dev_id: format!("{msg_id}") } };
+        for (step, _, req, target) in test_data {
             let val = MapCtx {
-                msg_id,
-                map: json!(req).as_object().unwrap().to_owned(),
+                msg_id: step,
+                map: req.as_object().unwrap().to_owned(),
             };
-            let result = select_dev_info.eval(val).unwrap();
-            let result: DeviceInfo = serde_json::from_value(result.value).unwrap();
+            let result = select_dev_info.eval(val).unwrap().value;
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -111,12 +123,14 @@ mod select_dev_info {
     ///
     /// Fake DeviceInfo for testing only
     pub struct FakeDeviceInfo {
-        val: IndexMap<String, DeviceInfo>,
+        val: IndexMap<String, JsonVal>,
     }
     impl FakeDeviceInfo {
-        fn new(val: Vec<DeviceInfo>) -> Self {
+        fn new(val: Vec<(&str, JsonVal)>) -> Self {
             Self {
-                val: IndexMap::from_iter(val.into_iter().map(|(val)| (val.id.clone(), val))),
+                val: IndexMap::from_iter(val.into_iter().map(|(dev_id, val)| {
+                    (dev_id.to_owned(), val)
+                })),
             }
         }
     }
