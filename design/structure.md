@@ -60,18 +60,6 @@ flowchart LR
 ## Поведенческая диаграмма
 
 ```mermaid
-zenuml
-    title 
-    @Actor User
-    IdmClient
-    IdmServer
-    User -> IdmClient: 
-    IdmClient -> IdmServer: Cot.Act DevStream
-    IdmClient -> IdmServer: Cot.Req DevInfo
-    IdmClient -> IdmServer: Cot.Req DevDoc
-```
-
-```mermaid
 sequenceDiagram
 		participant User
     participant IdmClient
