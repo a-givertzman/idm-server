@@ -81,11 +81,11 @@
 
 ```mermaid
 sequenceDiagram 
-    User->>Server: TCP подключение
+    Client->>Server: TCP подключение
     Server->>Connection: Создание соединения
     
     loop Обработка сообщений
-        User->>Connection: JSON сообщение
+        Client->>Connection: JSON сообщение
         Connection->>SelectCot: Парсинг сообщения
         
 				alt Request
@@ -115,10 +115,10 @@ sequenceDiagram
 				end
 				
         SelectCot-->>Connection: Результат
-        Connection-->>User: JSON ответ
+        Connection-->>Client: JSON ответ
     end
     
-    User->>Connection: Отключение
+    Client->>Connection: Отключение
     Connection-->>Server: Закрытие соединения
 ```
 
