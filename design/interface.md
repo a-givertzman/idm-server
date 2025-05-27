@@ -10,6 +10,7 @@
 ```json
     {
         "cot": "Act",
+        "act": "DeviceStream",
         "data": {
             "devId": 111
         }
@@ -29,7 +30,7 @@
 ```json
     {
         "cot": "Req",
-        "req": "DeviceInfo"
+        "req": "DeviceInfo",
         "data": {
             "devId": 111
         }
@@ -41,6 +42,7 @@
 ```json
     {
         "cot": "RecCon",
+        "req": "DeviceInfo",
         "data": {
             // Device Info data
         },
@@ -77,6 +79,7 @@
 ```json
     {
         "cot": "RecCon",
+        "req": "DeviceDoc",
         "data": {
             // Device Doc data
         },
