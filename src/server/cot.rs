@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-
-use crate::domain::{Error, JsonVal};
+use crate::domain::{Error, JsonMap, JsonVal};
 
 ///
 /// Cose of transmission of the TCP message
@@ -20,6 +19,17 @@ pub enum Cot {
     ReqCon,
     ReqErr,
     Inf,
+}
+impl Cot {
+    ///
+    /// Returns [Cot] created from `json::Map` by specified `key`
+    pub fn try_from_map(map: & JsonMap<String, JsonVal>, key: impl AsRef<str>) -> Result<Self, Error> {
+        let error = Error::new("Cot", "try_from");
+        match map.get(key.as_ref()) {
+            Some(cot) => Cot::try_from(cot),
+            None => Err(error.err(format!("Field '{}' missed in the map {:#?}", key.as_ref(), map))),
+        }
+    }
 }
 //
 //

@@ -33,25 +33,20 @@ impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> for SelectCot {
                 let value: JsonVal = value;
                 match value.as_object() {
                     Some(map) => {
-                        match map.get("cot") {
-                            Some(cot) => {
-                                match Cot::try_from(cot) {
-                                    Ok(cot) => {
-                                        match self.select.get_mut(&cot) {
-                                            Some(eval) => {
-                                                match cot {
-                                                    Cot::Act => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, link)),
-                                                    Cot::Req => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, None)),
-                                                    _ => Err(error.err(format!("Cot {:?} - is not supported", cot))),
-                                                }
-                                            },
-                                            None => Err(error.err(format!("Cot {:?} - is not supported", cot))),
+                        match Cot::try_from_map(map, "cot") {
+                            Ok(cot) => {
+                                match self.select.get_mut(&cot) {
+                                    Some(eval) => {
+                                        match cot {
+                                            Cot::Act => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, link)),
+                                            Cot::Req => eval.eval((MapCtx { map: map.to_owned(), msg_id: input.msg_id }, None)),
+                                            _ => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                         }
-                                    }
-                                    Err(err) => Err(error.pass_with("Parse cot error", err)),
+                                    },
+                                    None => Err(error.err(format!("Cot {:?} - is not supported", cot))),
                                 }
                             }
-                            None => Err(error.err(format!("Field 'cot' missed in the request {:#?}", map))),
+                            Err(err) => Err(error.pass_with("Parse cot error", err)),
                         }
                     }
                     None => Err(error.err(format!("Wrong request format, map expected, but found {:#?}", value))),
