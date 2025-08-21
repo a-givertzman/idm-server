@@ -1,11 +1,7 @@
 use std::{fs::OpenOptions, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::{domain::{Error, EvalEx, JsonVal}, server::EvalResult};
-///
-/// Wrapper for the [DeviceInfo] id of type u32
-#[derive(Debug, PartialEq)]
-pub struct DevId(pub String);
+use crate::{device::DevId, domain::{Error, EvalEx}, server::EvalResult};
 ///
 /// Reply to `DeviceInfo` request
 /// - Provides basic overview info by device
@@ -44,38 +40,6 @@ pub struct DeviceInfo {
 //
 //
 impl DeviceInfo {
-    ///
-    /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
-    pub fn new(
-        id: String,
-        manufacturer: String,
-        vendor: String,
-        order_code: String,
-        model: String,
-        serial: String,
-        name: String,
-        description: String,
-        width: String,
-        height: String,
-        depth: String,
-        weight: String,
-    ) -> Self {
-        Self {
-            path: PathBuf::new(),
-            id,
-            manufacturer,
-            vendor,
-            order_code,
-            model,
-            serial,
-            name,
-            description,
-            width,
-            height,
-            depth,
-            weight,
-        }
-    }
     ///
     /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
     pub fn from_path<P: AsRef<Path>>(path: P) -> Self {

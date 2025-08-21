@@ -1,7 +1,7 @@
 mod conf;
 mod server;
 mod domain;
-mod device_info;
+mod device;
 #[cfg(test)]
 mod test;
 use conf::Conf;

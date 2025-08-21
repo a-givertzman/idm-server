@@ -11,8 +11,8 @@
     {
         "cot": "Act",
         "name": "DeviceStream",
-        "data": {
-            "devId": 111
+        "content": {
+            "dev-id": 111
         }
     }
 ```
@@ -31,8 +31,8 @@
     {
         "cot": "Req",
         "name": "DeviceInfo",
-        "data": {
-            "devId": 111
+        "content": {
+            "dev-id": 111
         }
     }
 ```
@@ -43,7 +43,7 @@
     {
         "cot": "RecCon",
         "name": "DeviceInfo",
-        "data": {
+        "content": {
             // Device Info data
         },
     }
@@ -68,8 +68,8 @@
     {
         "cot": "Req",
         "name": "DeviceDoc",
-        "data": {
-            "devId": 111
+        "content": {
+            "dev-id": 111
         }
     }
 ```
@@ -80,7 +80,7 @@
     {
         "cot": "RecCon",
         "name": "DeviceDoc",
-        "data": {
+        "content": {
             // Device Doc data
         },
     }

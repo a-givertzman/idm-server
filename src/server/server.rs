@@ -1,7 +1,7 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{collections::FxDashMap, services::entity::Cot, sync::Handles, thread_pool::Scheduler};
-use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
+use crate::{device::{DeviceDoc, DeviceInfo}, server::{Connection, ServerConf}};
 use super::{select_cot::SelectCot, select_req::SelectReq, Request, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
 /// The Server
@@ -80,7 +80,9 @@ impl Server {
                                                             DeviceInfo::from_path("assets/info/"),
                                                         ))),
                                                         // Handling incomong request `DeviceDoc`
-                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new())),
+                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new(
+                                                            DeviceDoc::from_path("assets/info/"),
+                                                        ))),
                                                     ]
                                                 ))),
                                             ],

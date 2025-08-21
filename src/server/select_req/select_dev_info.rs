@@ -1,4 +1,4 @@
-use crate::{device_info::DevId, domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
+use crate::{device::DevId, domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
 
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]

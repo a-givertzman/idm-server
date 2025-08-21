@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use super::DevConf;
 
 ///

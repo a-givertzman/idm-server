@@ -8,7 +8,7 @@ mod select_dev_info {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::{EvalEx, JsonVal}, server::{EvalResult, Query, Request, SelectDevInfo}};
+    use crate::{device::DevId, domain::{EvalEx, JsonVal}, server::{EvalResult, Query, Request, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -41,20 +41,20 @@ mod select_dev_info {
                 json!({"dev-id": "Device-111"}),
                 json!({
                     "cot": "req",
-                    "data": DeviceInfo::new(
-                        "Device-111".into(),
-                        "MAN01".into(),
-                        "VEN01".into(),
-                        "OC01".into(),
-                        "MOD01".into(),
-                        "SER01".into(),
-                        "NAM01".into(),
-                        "DESC01".into(),
-                        "W01".into(),
-                        "H01".into(),
-                        "DEP01".into(),
-                        "WEI01".into()
-                    ),
+                    "data": {
+                        "id": "111",
+                        "manufacturer": "MAN01",
+                        "vendor": "VEN01",
+                        "order-code": "OC01",
+                        "model": "MOD01",
+                        "serial": "SER01",
+                        "name": "NAM01",
+                        "description": "DESC01",
+                        "width": "W01",
+                        "height": "H01",
+                        "depth": "DEP01",
+                        "weight": "WEI01"
+                    },
                 }),
             ),
             (
@@ -63,20 +63,20 @@ mod select_dev_info {
                 json!({"dev-id": "Device-222"}),
                 json!({
                     "cot": "req",
-                    "data": DeviceInfo::new(
-                        "Device-222".into(),
-                        "MAN02".into(),
-                        "VEN02".into(),
-                        "OC02".into(),
-                        "MOD02".into(),
-                        "SER02".into(),
-                        "NAM02".into(),
-                        "DESC02".into(),
-                        "W02".into(),
-                        "H02".into(),
-                        "DEP02".into(),
-                        "WEI02".into()
-                    ),
+                    "data": {
+                        "id": "222",
+                        "manufacturer": "MAN02",
+                        "vendor": "VEN02",
+                        "order-code": "OC02",
+                        "model": "MOD02",
+                        "serial": "SER02",
+                        "name": "NAM02",
+                        "description": "DESC02",
+                        "width": "W02",
+                        "height": "H02",
+                        "depth": "DEP02",
+                        "weight": "WEI02"
+                    },
                 }),
                 
             ),
@@ -86,20 +86,20 @@ mod select_dev_info {
                 json!({"dev-id": "Device-333"}),
                 json!({
                     "cot": "req",
-                    "data": DeviceInfo::new(
-                        "Device-333".into(),
-                        "MAN03".into(),
-                        "VEN03".into(),
-                        "OC03".into(),
-                        "MOD03".into(),
-                        "SER03".into(),
-                        "NAM03".into(),
-                        "DESC03".into(),
-                        "W03".into(),
-                        "H03".into(),
-                        "DEP03".into(),
-                        "WEI03".into()
-                    ),
+                    "data": {
+                        "id": "333",
+                        "manufacturer": "MAN03",
+                        "vendor": "VEN03",
+                        "order-code": "OC03",
+                        "model": "MOD03",
+                        "serial": "SER03",
+                        "name": "NAM03",
+                        "description": "DESC03",
+                        "width": "W03",
+                        "height": "H03",
+                        "depth": "DEP03",
+                        "weight": "WEI03"
+                    },
                 }),
                     
             ),

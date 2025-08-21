@@ -99,7 +99,7 @@ impl Connection {
         let conf = self.conf.clone();
         let stream = self.stream.take().ok_or(error.err(format!("Can't take stream")))?;
         self.set_tcp_timeout(&stream, conf.timeout);
-        let mut ctx = self.ctx.take().ok_or(error.err(format!("Can't take ctx")))?;
+        let ctx = self.ctx.take().ok_or(error.err(format!("Can't take ctx")))?;
         let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
         self.send(&stream, hub.clone())?;
         let exit = self.exit.clone();
