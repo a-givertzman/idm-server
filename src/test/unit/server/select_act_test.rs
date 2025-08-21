@@ -3,10 +3,11 @@
 mod select_act {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{domain::{Eval, JsonVal, Link}, server::{Cot, JsonCtx, MapCtx, SelectAct}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command};
     ///
     ///
@@ -65,7 +66,7 @@ mod select_act {
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
-        let mut select_act = SelectAct::new(vec![
+        let select_act = SelectAct::new(vec![
             (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectAct1", "").err(request));
@@ -89,13 +90,14 @@ mod select_act {
             }))),
         ]);
         for (step, req, target) in test_data {
-            let val = MapCtx {
-                msg_id: step,
-                map: json!(req).as_object().unwrap().to_owned(),
-            };
+            let val: Query<Command> = serde_json::from_value(req).unwrap();
+            // MapCtx {
+            //     msg_id: step,
+            //     map: json!(req).as_object().unwrap().to_owned(),
+            // };
             let (loc, rem) = Link::split(&dbg);
             let select_result = select_act.eval((val, Some(rem)));
-            let select_target = Ok(JsonCtx::empty());
+            let select_target = Ok(None);
             assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
             let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
             match (result, target) {

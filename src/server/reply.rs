@@ -15,3 +15,12 @@ pub(super) struct Reply {
 pub(super) struct ReplyError {
     pub message: String,
 }
+//
+//
+impl ReplyError {
+    ///
+    /// Returns [ReplyError] new instance
+    pub fn new(err: impl Into<String>) -> Self {
+        Self { message: err.into() }
+    }
+}

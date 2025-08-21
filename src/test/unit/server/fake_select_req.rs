@@ -1,17 +1,18 @@
+use std::{borrow::Borrow, hash::Hash, fmt::Debug};
 use serde_json::json;
-use crate::{domain::{Error, Eval, JsonVal}, server::{JsonCtx, MapCtx}};
+use crate::{domain::{Error, EvalEx}, server::{EvalResult, Query}};
 
 ///
 /// Fake Req1 handler
 pub(crate) struct FakeSelectReq1 {
-    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> EvalResult + Send>,
 }
 //
 //
 impl FakeSelectReq1 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> EvalResult + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -19,25 +20,26 @@ impl FakeSelectReq1 {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq1 {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq1 {
+    fn eval(&self, query: Query<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq1", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
-                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
+                        match (self.ctx)(data) {
+                            Ok(value) => Ok(Some(json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //
@@ -45,14 +47,14 @@ unsafe impl Send for FakeSelectReq1 {}
 ///
 /// Fake Req2 handler
 pub(crate) struct FakeSelectReq2 {
-    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> EvalResult + Send>,
 }
 //
 //
 impl FakeSelectReq2 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> EvalResult + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -60,25 +62,26 @@ impl FakeSelectReq2 {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq2 {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq2 {
+    fn eval(&self, query: Query<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq2", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
-                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
+                        match (self.ctx)(data) {
+                            Ok(value) => Ok(Some(json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //
@@ -86,14 +89,14 @@ unsafe impl Send for FakeSelectReq2 {}
 ///
 /// Fake Req3 handler
 pub(crate) struct FakeSelectReq3 {
-    ctx: Box<dyn Fn(String) -> Result<JsonVal, Error> + Send>,
+    ctx: Box<dyn Fn(String) -> EvalResult + Send>,
 }
 //
 //
 impl FakeSelectReq3 {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Fn(String) -> Result<JsonVal, Error> + Send + 'static) -> Self {
+    pub fn new(ctx: impl Fn(String) -> EvalResult + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -101,25 +104,26 @@ impl FakeSelectReq3 {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for FakeSelectReq3 {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq3 {
+    fn eval(&self, query: Query<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq3", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
-                            Ok(value) => Ok(JsonCtx::new(input.msg_id, json!(value))),
+                        match (self.ctx)(data) {
+                            Ok(value) => Ok(Some(json!(value))),
                             Err(err) => Err(error.pass(err.to_string())),
                         }
                     }
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //

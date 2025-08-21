@@ -1,19 +1,18 @@
-use crate::{device_info::DevId, domain::{Error, Eval, JsonVal}};
-use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
+use crate::{device_info::DevId, domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
 
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceInfo]
 pub(crate) struct SelectDevInfo {
-    ctx: Box<dyn Eval<DevId, Result<JsonVal, Error>> + Send>,
+    ctx: Box<dyn EvalEx<DevId, EvalResult> + Send>,
 }
 //
 //
 impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Eval<DevId, Result<JsonVal, Error>> + Send + 'static) -> Self {
+    pub fn new(ctx: impl EvalEx<DevId, EvalResult> + Send + 'static) -> Self {
         Self {
             ctx: Box::new(ctx),
         }
@@ -21,24 +20,26 @@ impl SelectDevInfo {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl EvalEx<Query<Request>, EvalResult> for SelectDevInfo {
+    fn eval(&self, query: Query<Request>) -> EvalResult {
         let error = Error::new("SelectDevInfo", "eval");
-        match input.map.get("data") {
+        match query.content.get("dev-id") {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
-                    Ok(data) => {
-                        let req: DeviceInfoRequest = data;
-                        match self.ctx.eval(DevId(req.dev_id)) {
-                            Ok(value) => Ok(JsonCtx::new(input.msg_id, value)),
+                    Ok(dev_id) => {
+                        match self.ctx.eval(DevId(dev_id)) {
+                            Ok(value) => Ok(value),
                             Err(err) => Err(error.pass(err)),
                         }
                     }
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("data field is not found in {:#?}", query))),
         }
+    }
+    fn exit(&self) {
+        self.ctx.exit();
     }
 }
 //

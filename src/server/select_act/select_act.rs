@@ -1,19 +1,19 @@
-use std::fmt::Debug;
+use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
-use crate::{domain::{Error, Eval, Link}, server::{JsonCtx, MapCtx}};
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query}};
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
 pub struct SelectAct<R> {
-    select: IndexMap<R, Box<dyn Eval<(MapCtx, Option<Link>), Result<(), Error>> + Send>>,
+    select: IndexMap<R, Box<dyn EvalEx<(Query<R>, Option<Link>), EvalResult> + Send>>,
 }
 //
 //
 impl<R: std::hash::Hash + std::cmp::Eq> SelectAct<R> {
     ///
     /// Returns [SelectAct] new instance
-    pub fn new(select: Vec<(R, Box<dyn Eval<(MapCtx, Option<Link>), Result<(), Error>> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(R, Box<dyn EvalEx<(Query<R>, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select
             ),
@@ -22,26 +22,22 @@ impl<R: std::hash::Hash + std::cmp::Eq> SelectAct<R> {
 }
 //
 //
-impl<R: std::hash::Hash + std::cmp::Eq + serde::de::DeserializeOwned + Debug> Eval<(MapCtx, Option<Link>), Result<JsonCtx, Error>> for SelectAct<R> {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<JsonCtx, Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for SelectAct<R> {
+    fn eval(&self, (query, link): (Query<R>, Option<Link>)) -> EvalResult {
         let error = Error::new("SelectAct", "eval");
-        match input.map.get("act") {
-            Some(req) => {
-                match serde_json::from_value(req.to_owned()) {
-                    Ok(req) => {
-                        let req: R = req;
-                        match self.select.get_mut(&req) {
-                            Some(eval) => {
-                                let _ = eval.eval((input, link));
-                                Ok(JsonCtx::empty())
-                            },
-                            None => Err(error.err(format!("Request {:?} - is not supported", req))),
-                        }
-                    }
-                    Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", req), err.to_string())),
-                }
-            }
-            None => Err(error.err(format!("Field 'act' missed in the request {:#?}", input.map))),
+        match self.select.get(&query.name) {
+            Some(eval) => {
+                let _ = eval.eval((query, link));
+                Ok(None)
+            },
+            None => Err(error.err(format!("Request {:?} - is not supported", query.name))),
+        }
+    }
+    //
+    //
+    fn exit(&self) {
+        for (_, e) in &self.select {
+            e.exit();
         }
     }
 }

@@ -3,11 +3,12 @@
 mod select_cot {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::services::entity::Cot;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{domain::{Eval, JsonVal, Link}, server::{BytesCtx, Cot, JsonCtx, SelectAct, SelectCot, SelectReq}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct, SelectCot, SelectReq}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
@@ -90,23 +91,23 @@ mod select_cot {
                 Ok(json!({ "data": "CmdReply3 09" })),
             ),
         ];
-        let mut select = SelectCot::new(vec![
+        let select = SelectCot::new(vec![
             (Cot::Act, Box::new(SelectAct::new(vec![
-                (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
+                (Request::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct1", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Command1", "CmdReply1")});
                     Ok(reply)
                 }))),
-                (Command::Cmd2, Box::new(FakeSelectAct2::new(|request| {
+                (Request::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Command2", "CmdReply2")});
                     Ok(reply)
                 }))),
-                (Command::Cmd3, Box::new(FakeSelectAct3::new(|request| {
+                (Request::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct3", "").err(request));
                     }
@@ -120,35 +121,35 @@ mod select_cot {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Request1", "Reply1")});
-                    Ok(reply)
+                    Ok(Some(reply))
                 }))),
                 (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Request2", "Reply2")});
-                    Ok(reply)
+                    Ok(Some(reply))
                 }))),
                 (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Request3", "Reply3")});
-                    Ok(reply)
+                    Ok(Some(reply))
                 }))),
             ]))),
         ]);
         for (step, req_cot, req, target) in test_data {
-            let bytes = serde_json::to_vec(&req).unwrap();
-            let val = BytesCtx {
-                msg_id: step,
-                bytes,
-            };
+            let query: Query<Request> = serde_json::from_value(req).unwrap();
+            //  BytesCtx {
+            //     msg_id: step,
+            //     bytes,
+            // };
             match req_cot {
                 Cot::Act => {
                     let (loc, rem) = Link::split(&dbg);
-                    let select_result = select.eval((val, Some(rem)));
-                    let select_target = Ok(JsonCtx::empty());
+                    let select_result = select.eval((query, Some(rem)));
+                    let select_target = Ok(None);
                     assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
                     let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
                     match (result, target) {
@@ -162,10 +163,10 @@ mod select_cot {
                     }
                 }
                 Cot::Req => {
-                    let result = select.eval((val, None));
+                    let result = select.eval((query, None));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let result = result.value;
+                            let result = result.unwrap();
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -183,19 +184,13 @@ mod select_cot {
     ///
     /// Fake List of API requiests
     #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    enum Command {
-        Cmd1,
-        Cmd2,
-        Cmd3,
-        None,
-    }
-    ///
-    /// Fake List of API requiests
-    #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
     enum Request {
         Req1,
         Req2,
         Req3,
+        Cmd1,
+        Cmd2,
+        Cmd3,
         None,
     }
 }

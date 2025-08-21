@@ -1,4 +1,5 @@
-use crate::{domain::{Error, Eval, JsonVal, Link}, server::MapCtx};
+use std::{borrow::Borrow, hash::Hash, fmt::Debug};
+use crate::{domain::{Error, EvalEx, JsonVal, Link}, server::{EvalResult, Query}};
 
 ///
 /// Fake Req1 handler
@@ -18,20 +19,20 @@ impl FakeSelectAct1 {
 }
 //
 //
-impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct1 {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for FakeSelectAct1 {
+    fn eval(&self, (query, link): (Query<R>, Option<Link>)) -> EvalResult {
         let error = Error::new("FakeSelectAct1", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
+                        match (self.ctx)(data) {
                             Ok(value) => {
                                 link.unwrap().send(
                                     serde_json::to_string(&value).unwrap(),
                                 ).unwrap();
-                                Ok(())
+                                Ok(None)
                             }
                             Err(err) => Err(error.pass(err.to_string())),
                         }
@@ -39,9 +40,10 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct1 {
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //
@@ -64,20 +66,20 @@ impl FakeSelectAct2 {
 }
 //
 //
-impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct2 {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for FakeSelectAct2 {
+    fn eval(&self, (query, link): (Query<R>, Option<Link>)) -> EvalResult {
         let error = Error::new("FakeSelectAct2", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
+                        match (self.ctx)(data) {
                             Ok(value) => {
                                 link.unwrap().send(
                                     serde_json::to_string(&value).unwrap(),
                                 ).unwrap();
-                                Ok(())
+                                Ok(None)
                             }
                             Err(err) => Err(error.pass(err.to_string())),
                         }
@@ -85,9 +87,10 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct2 {
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //
@@ -110,20 +113,20 @@ impl FakeSelectAct3 {
 }
 //
 //
-impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct3 {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for FakeSelectAct3 {
+    fn eval(&self, (query, link): (Query<R>, Option<Link>)) -> EvalResult {
         let error = Error::new("FakeSelectAct3", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
+        let key = "data";
+        match query.content.get(key) {
+            Some(val) => {
+                match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
-                        let req: String = data;
-                        match (self.ctx)(req) {
+                        match (self.ctx)(data) {
                             Ok(value) => {
                                 link.unwrap().send(
                                     serde_json::to_string(&value).unwrap(),
                                 ).unwrap();
-                                Ok(())
+                                Ok(None)
                             }
                             Err(err) => Err(error.pass(err.to_string())),
                         }
@@ -131,9 +134,10 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for FakeSelectAct3 {
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //

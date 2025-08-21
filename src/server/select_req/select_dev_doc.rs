@@ -1,12 +1,12 @@
-use crate::domain::{Error, Eval};
-use super::{request::DeviceDocRequest, JsonCtx, MapCtx};
+use crate::{domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
+use super::request::DeviceDocRequest;
 
 ///
 /// Extracting incoming messages as [DeviceDocRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceDoc]
 pub struct SelectDevDoc {
-    // ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
+    // ctx: Box<dyn EvalEx<DevId, Result<JsonCtx, Error>> + Send>,
 }
 //
 //
@@ -14,7 +14,7 @@ impl SelectDevDoc {
     ///
     /// Returns [SelectDevDoc] new instance
     pub fn new(
-        // ctx: impl Eval<DevId, Result<JsonCtx, Error>> + Send + 'static
+        // ctx: impl EvalEx<DevId, Result<JsonCtx, Error>> + Send + 'static
     ) -> Self {
         Self {
             // ctx: Box::new(ctx),
@@ -23,10 +23,10 @@ impl SelectDevDoc {
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevDoc {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl EvalEx<Query<Request>, EvalResult> for SelectDevDoc {
+    fn eval(&self, query: Query<Request>) -> EvalResult {
         let error = Error::new("SelectDevDoc", "eval");
-        match input.map.get("data") {
+        match query.content.get("dev-id") {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(data) => {
@@ -40,9 +40,10 @@ impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevDoc {
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+            None => Err(error.err(format!("data field is not found in {:#?}", query))),
         }
     }
+    fn exit(&self) {}
 }
 //
 //

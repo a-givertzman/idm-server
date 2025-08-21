@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 
 ///
 /// List of API requiests
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
 pub enum Request {
+    DeviceStream,
     DeviceInfo,
     DeviceDoc,
 }

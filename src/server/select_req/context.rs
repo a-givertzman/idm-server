@@ -1,4 +1,5 @@
 use api_tools::api::message::message::Bytes;
+use sal_core::error::Error;
 use crate::domain::JsonVal;
 
 ///
@@ -12,18 +13,16 @@ pub struct BytesCtx {
 #[derive(Debug, PartialEq)]
 pub struct JsonCtx {
     pub msg_id: u32,
-    pub value: JsonVal,
-    pub is_empty: bool,
+    pub value: Result<JsonVal, Error>,
 }
 impl JsonCtx {
-    pub fn new(id: u32, value: JsonVal) -> Self {
-        Self { msg_id: id, value, is_empty: false }
+    pub fn new(id: u32, value: Result<JsonVal, Error>) -> Self {
+        Self { msg_id: id, value }
     }
     pub fn empty() -> Self {
         Self {
             msg_id: 0,
-            value: JsonVal::Null,
-            is_empty: true,
+            value: Ok(JsonVal::Null),
         }
     }
 }

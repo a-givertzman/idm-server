@@ -4,7 +4,7 @@ use rand::Rng;
 use sal_core::dbg::Dbg;
 use sal_sync::{services::ServiceCycle, thread_pool::{JoinHandle, Scheduler}};
 use serde::{Deserialize, Serialize};
-use crate::{domain::{Error, Eval, Link}, server::{Event, MapCtx}};
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Query, Request}};
 use super::{DevConf, DevStreamConf};
 
 ///
@@ -52,19 +52,14 @@ impl DevStream {
         }
         Ok(())
     }
-    ///
-    /// Send exit signal to the spawned thread
-    pub fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
-    }
 }
 //
 //
-impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
-    fn eval(&mut self, (input, link): (MapCtx, Option<Link>)) -> Result<(), Error> {
+impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
+    fn eval(&self, (query, link): (Query<Request>, Option<Link>)) -> EvalResult {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
-            true => Ok(()),
+            true => Ok(None),
             false => match link {
                 Some(link) => {
                     let dbg = self.dbg.clone();
@@ -91,7 +86,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                                         Ok(bytes) => {
                                             log::warn!("{dbg}.eval | Sending dev.id: {}", dev.id);
                                             // log::warn!("{dbg}.eval | Sending dev: {:?}", String::from_utf8_lossy(&bytes));
-                                            let event = Event { msg_id: input.msg_id, bytes };
+                                            let event = Event::new(dev.id.parse().unwrap(), bytes);
                                             // log::warn!("{dbg}.eval | Sending event: {:?}", event);
                                             if let Err(err) = link.send(event) {
                                                 log::warn!("{dbg}.eval | Send error: {:?}", err);
@@ -115,7 +110,7 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                         Ok(handle) => {
                             self.handle.push(handle);
                             log::warn!("{dbg}.eval | Staring - Ok");
-                            Ok(())
+                            Ok(None)
                         }
                         Err(err) => Err(error.pass(err)),
                     }
@@ -123,6 +118,11 @@ impl Eval<(MapCtx, Option<Link>), Result<(), Error>> for DevStream {
                 None => Err(error.err("Link is missing")),
             },
         }
+    }
+    //
+    //
+    fn exit(&self) {
+        self.exit.store(true, Ordering::SeqCst);
     }
 }
 //

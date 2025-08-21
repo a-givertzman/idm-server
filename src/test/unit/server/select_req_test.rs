@@ -7,7 +7,7 @@ mod select_req {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{domain::Eval, server::{MapCtx, SelectReq}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
+    use crate::{domain::EvalEx, server::{Query, SelectReq}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -71,32 +71,29 @@ mod select_req {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
                 let reply = json!({"data": request.replace("Request1", "Reply1")});
-                Ok(reply)
+                Ok(Some(reply))
             }))),
             (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
                 let reply = json!({"data": request.replace("Request2", "Reply2")});
-                Ok(reply)
+                Ok(Some(reply))
             }))),
             (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
                 let reply = json!({"data": request.replace("Request3", "Reply3")});
-                Ok(reply)
+                Ok(Some(reply))
             }))),
         ]);
         for (step, req, target) in test_data {
-            let val = MapCtx {
-                msg_id: step,
-                map: req.as_object().unwrap().to_owned(),
-            };
+            let val: Query<Request> = serde_json::from_value(req).unwrap();
             let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
-                    let result = result.value;
+                    let result = result.unwrap();
                     assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
                 }
                 (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),

@@ -6,7 +6,7 @@ mod device_info {
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::Eval, server::DeviceInfoRequest};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::EvalEx, server::DeviceInfoRequest};
     ///
     ///
     static INIT: Once = Once::new();
@@ -89,9 +89,9 @@ mod device_info {
                 ),
             ),
         ];
-        let mut dev_info = DeviceInfo::from_path(path);
+        let dev_info = DeviceInfo::from_path(path);
         for (step, id, target) in test_data {
-            let result = dev_info.eval(DevId(id)).unwrap();
+            let result = dev_info.eval(DevId(id)).unwrap().unwrap();
             let result: DeviceInfo = serde_json::from_value(result).unwrap();
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }

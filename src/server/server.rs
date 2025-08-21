@@ -1,9 +1,9 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{Scheduler, JoinHandle};
+use sal_sync::{services::entity::Cot, thread_pool::{JoinHandle, Scheduler}};
 use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, Request, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
+use super::{select_cot::SelectCot, select_req::SelectReq, Request, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -63,7 +63,7 @@ impl Server {
                                                 (Cot::Act, Box::new(SelectAct::new(
                                                     vec![
                                                         // Handling incomong command `DeviceStream`
-                                                        (Command::DeviceStream, Box::new(DevStream::new(
+                                                        (Request::DeviceStream, Box::new(DevStream::new(
                                                             &dbg,
                                                             conf.dev_stream.clone(),
                                                             scheduler.clone(),

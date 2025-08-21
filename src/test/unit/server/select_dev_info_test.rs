@@ -4,10 +4,11 @@ mod select_dev_info {
     use std::{sync::Once, time::Duration};
     use indexmap::IndexMap;
     use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{device_info::{DevId, DeviceInfo}, domain::{Eval, JsonVal}, server::{MapCtx, SelectDevInfo}};
+    use crate::{device_info::{DevId, DeviceInfo}, domain::{EvalEx, JsonVal}, server::{EvalResult, Query, Request, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -103,17 +104,18 @@ mod select_dev_info {
                     
             ),
         ];
-        let mut select_dev_info = SelectDevInfo::new(
+        let select_dev_info = SelectDevInfo::new(
             FakeDeviceInfo::new(
                 test_data.clone().map(|(_, dev_id, _, val)| (dev_id, val)).into(),
             )
         );
         for (step, _, req, target) in test_data {
-            let val = MapCtx {
-                msg_id: step,
-                map: req.as_object().unwrap().to_owned(),
-            };
-            let result = select_dev_info.eval(val).unwrap().value;
+            let val = Query::new(step, Request::DeviceInfo, Cot::Req, req.as_object().unwrap().to_owned());
+            //  {
+            //     msg_id: step,
+            //     map: req.as_object().unwrap().to_owned(),
+            // };
+            let result = select_dev_info.eval(val).unwrap().unwrap();
             assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
         // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -135,13 +137,14 @@ mod select_dev_info {
     }
     //
     //
-    impl Eval<DevId, Result<JsonVal, Error>> for FakeDeviceInfo {
-        fn eval(&mut self, id: DevId) -> Result<JsonVal, Error> {
+    impl EvalEx<DevId, EvalResult> for FakeDeviceInfo {
+        fn eval(&self, id: DevId) -> EvalResult {
         let error = Error::new("FakeDeviceInfo", "eval");
             match self.val.get(&(id.0)) {
-                Some(val) => Ok(json!(val)),
+                Some(val) => Ok(Some(json!(val))),
                 None => Err(error.err(format!("id {} - is not found in the test_data", id.0))),
             }
         }
+        fn exit(&self) {}
     }
 }

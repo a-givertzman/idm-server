@@ -1,7 +1,7 @@
 use std::{fs::OpenOptions, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use crate::{domain::{Error, Eval, JsonVal}, server::JsonCtx};
+use crate::{domain::{Error, EvalEx, JsonVal}, server::EvalResult};
 ///
 /// Wrapper for the [DeviceInfo] id of type u32
 #[derive(Debug, PartialEq)]
@@ -118,13 +118,18 @@ impl DeviceInfo {
 }
 //
 //
-impl Eval<DevId, Result<JsonVal, Error>> for DeviceInfo {
-    fn eval(&mut self, id: DevId) -> Result<JsonVal, Error> {
+impl EvalEx<DevId, EvalResult> for DeviceInfo {
+    //
+    //
+    fn eval(&self, id: DevId) -> EvalResult {
         let error = Error::new("DeviceInfo", "eval");
         let path = self.path.join(format!("{}.json", id.0));
         match Self::read(path) {
-            Ok(value) => Ok(json!(value)),
+            Ok(value) => Ok(Some(json!(value))),
             Err(err) => Err(error.pass(err)),
         }
     }
+    //
+    //
+    fn exit(&self) {}
 }

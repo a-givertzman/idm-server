@@ -5,11 +5,11 @@ use api_tools::api::message::{
     parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn,
 };
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{sync::{Handles, Owner}, thread_pool::{JoinHandle, Scheduler}};
+use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
-    domain::{Eval, Hub, JsonVal, Link, TcpMessage}, server::ConnectionConf
+    domain::{EvalEx, Hub, JsonVal, Link, TcpMessage}, server::{ConnectionConf, EvalResult, Query, ReplyError, Request}
 };
-use super::{BytesCtx, Event, JsonCtx, Reply};
+use super::{Event, Reply};
 
 ///
 /// The [Connection] of the `Server`
@@ -18,7 +18,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Query<Request>, Option<Link>), EvalResult> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
     hub_exit: Arc<AtomicBool>,
@@ -33,7 +33,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static,
+        ctx: impl EvalEx<(Query<Request>, Option<Link>), EvalResult> + Send + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -97,51 +97,61 @@ impl Connection {
         let dbg = self.dbg.clone();
         let error = Error::new(&self.dbg, "run");
         let conf = self.conf.clone();
-        let stream = self.stream.take().ok_or(error.err(format!("Can't take ctx")))?;
+        let stream = self.stream.take().ok_or(error.err(format!("Can't take stream")))?;
         self.set_tcp_timeout(&stream, conf.timeout);
         let mut ctx = self.ctx.take().ok_or(error.err(format!("Can't take ctx")))?;
-        let mut r_stream = BufReader::new(stream.try_clone().unwrap());
         let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
         self.send(&stream, hub.clone())?;
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let error = Error::new(&dbg, "run");
             let link = hub.link();
+            let mut r_stream = BufReader::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
             'main: loop {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
-                            Ok((msg_id, kind, _, bytes)) => {
+                            Ok((FieldId(msg_id), kind, _, bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
-                                        let reply = match ctx.eval((BytesCtx { bytes, msg_id: msg_id.0 }, Some(hub.link()))) {
-                                            Ok(reply) => {
-                                                match reply.is_empty {
-                                                    true => None,
-                                                    false => Some(Reply {
-                                                        data: reply.value,
+                                        match serde_json::from_slice(&bytes) {
+                                            Ok(query) => {
+                                                let reply = match ctx.eval((query, Some(hub.link()))) {
+                                                    Ok(reply) => reply.map(|reply| Reply {
+                                                        data: reply,
                                                         error: None,
                                                     }),
-                                                }
-                                            }
-                                            Err(err) => Some(Reply {
-                                                data: JsonVal::Null,
-                                                error: Some(super::ReplyError {
-                                                    message: error.pass(err).to_string()
-                                                }),
-                                            })
-                                        };
-                                        if let Some(reply) = reply {
-                                            match serde_json::to_vec(&reply) {
-                                                Ok(bytes) => {
-                                                    if let Err(err) = link.send(Event { msg_id: msg_id.0, bytes }) {
-                                                        log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                                    Err(err) => Some(Reply {
+                                                        data: JsonVal::Null,
+                                                        error: Some(ReplyError::new(
+                                                            error.pass(err).to_string()
+                                                        )),
+                                                    }),
+                                                };
+                                                if let Some(reply) = reply {
+                                                    match serde_json::to_vec(&reply) {
+                                                        Ok(bytes) => {
+                                                            if let Err(err) = link.send(Event::new(msg_id, bytes)) {
+                                                                log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                                            }
+                                                        }
+                                                        Err(err) => {
+                                                            log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                                        }
                                                     }
                                                 }
-                                                Err(err) => {
-                                                    log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                            }
+                                            Err(err) => {
+                                                match std::str::from_utf8(&bytes) {
+                                                    Ok(req) => log::warn!("{}", error.pass_with(format!("Request can't be parsed from {:#?}", req), err.to_string())),
+                                                    Err(err) => log::warn!("{}",
+                                                        error.pass_with(
+                                                            format!("Request can't be parsed from bytes into string, bytes:\n\t{:?}", bytes),
+                                                            err.to_string(),
+                                                        ),
+                                                    )
                                                 }
                                             }
                                         }
@@ -178,7 +188,7 @@ impl Connection {
     fn send(&self, stream: &TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "send");
-        let stream = stream.try_clone().map_err(|err| error.pass_with(format!("stream.try_clone error"), err.to_string()))?;
+        let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
         let hub_exit = self.hub_exit.clone();
         let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
             let mut w_stream = BufWriter::new(&stream);

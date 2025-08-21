@@ -3,11 +3,11 @@
 mod dev_stream {
     use std::{collections::HashMap, sync::Once, time::Duration};
     use sal_core::dbg::Dbg;
-    use sal_sync::thread_pool::ThreadPool;
+    use sal_sync::{services::entity::Cot, thread_pool::ThreadPool};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
-    use crate::{domain::{Eval, Link}, server::{DevStream, DevStreamConf, Device, Event, MapCtx}};
+    use crate::{domain::{EvalEx, Link}, server::{DevStream, DevStreamConf, Device, Event, MapCtx, Query, Request}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -52,12 +52,13 @@ mod dev_stream {
                     interval: 400   # ms
         "#;
         let conf: DevStreamConf = serde_yaml::from_str(conf).unwrap();
-        let mut dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
+        let dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
         let (loc, rem) = Link::split(&dbg);
-        let val = MapCtx {
-            msg_id: 0,
-            map: json!({"empty": ""}).as_object().unwrap().to_owned(),
-        };
+        let val = Query::new(0, Request::DeviceStream, Cot::Act, json!("{}").as_object().unwrap().to_owned());
+        // MapCtx {
+        //     msg_id: 0,
+        //     map: json!({"empty": ""}).as_object().unwrap().to_owned(),
+        // };
         dev_stream.eval((val, Some(rem))).unwrap();
         let mut results = HashMap::new();
         loop {

@@ -1,21 +1,21 @@
-use std::fmt::Debug;
+use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
-use crate::domain::{Error, Eval, Link};
-use super::{JsonCtx, MapCtx};
+use serde::de::DeserializeOwned;
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query}};
 
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
 pub struct SelectReq<R> {
-    select: IndexMap<R, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send>>,
+    select: IndexMap<R, Box<dyn EvalEx<Query<R>, EvalResult> + Send>>,
 }
 //
 //
 impl<R: std::hash::Hash + std::cmp::Eq> SelectReq<R> {
     ///
     /// Returns [SelectReq] new instance
-    pub fn new(select: Vec<(R, Box<dyn Eval<MapCtx, Result<JsonCtx, Error>> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(R, Box<dyn EvalEx<Query<R>, EvalResult> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select
             ),
@@ -24,25 +24,23 @@ impl<R: std::hash::Hash + std::cmp::Eq> SelectReq<R> {
 }
 //
 //
-impl<R: std::hash::Hash + std::cmp::Eq + serde::de::DeserializeOwned + Debug> Eval<(MapCtx, Option<Link>), Result<JsonCtx, Error>> for SelectReq<R> {
-    fn eval(&mut self, (input, _): (MapCtx, Option<Link>)) -> Result<JsonCtx, Error> {
+impl<R: Borrow<R> + Hash + Eq + DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for SelectReq<R> {
+    //
+    //
+    fn eval(&self, (query, _): (Query<R>, Option<Link>)) -> EvalResult {
         let error = Error::new("SelectReq", "eval");
-        match input.map.get("req") {
-            Some(req) => {
-                match serde_json::from_value(req.to_owned()) {
-                    Ok(req) => {
-                        let req: R = req;
-                        match self.select.get_mut(&req) {
-                            Some(eval) => {
-                                eval.eval(input)
-                            },
-                            None => Err(error.err(format!("Request {:?} - is not supported", req))),
-                        }
-                    }
-                    Err(err) => Err(error.pass_with(format!("Request can't be parsed {:#?}", req), err.to_string())),
-                }
-            }
-            None => Err(error.err(format!("Field 'req' missed in the request {:#?}", input.map))),
+        match self.select.get(&query.name) {
+            Some(eval) => {
+                eval.eval(query)
+            },
+            None => Err(error.err(format!("Request {:?} - is not supported", query.name))),
+        }
+    }
+    //
+    //
+    fn exit(&self) {
+        for (_, e) in &self.select {
+            e.exit();
         }
     }
 }
