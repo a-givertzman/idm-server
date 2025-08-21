@@ -23,6 +23,9 @@ fn main() {
             if let Err(err) = server.run() {
                 log::warn!("{dbg} | Error: {:?}", err);
             }
+            if let Err(err) = server.wait() {
+                log::warn!("{dbg} | Error: {:?}", err);
+            }
         }
         Err(err) => {
             log::warn!("{dbg} | Error: {:?}", err);
