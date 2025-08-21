@@ -3,6 +3,7 @@
 mod select_req {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
+    use sal_sync::services::entity::Cot;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
@@ -36,36 +37,36 @@ mod select_req {
         let test_data = [
             (
                 01,
-                json!({ "req": "Req1", "data": "Request1 01" }),
+                json!({ "name": "Req1", "cot": Cot::Req, "content": {"data": "Request1 01"} }),
                 Ok(json!({ "data": "Reply1 01" })),
             ),
             (
                 02,
-                json!({ "req": "Req2", "data": "Request2 02" }),
+                json!({ "name": "Req2", "cot": Cot::Req, "content": {"data": "Request2 02"} }),
                 Ok(json!({ "data": "Reply2 02" })),
             ),
             (
                 03,
-                json!({ "req": "Req3", "data": "Request3 03" }),
+                json!({ "name": "Req3", "cot": Cot::Req, "content": {"data": "Request3 03"} }),
                 Ok(json!({ "data": "Reply3 03" })),
             ),
             (
                 04,
-                json!({ "req": "Req1", "data": "Error 04" }),
+                json!({ "name": "Req1", "cot": Cot::Req, "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                json!({ "req": "Req2", "data": "Error 05" }),
+                json!({ "name": "Req2", "cot": Cot::Req, "content": {"data": "Error 05"} }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                json!({ "req": "Req2", "data": "Error 06" }),
+                json!({ "name": "Req2", "cot": Cot::Req, "content": {"data": "Error 06"} }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
-        let mut select_req = SelectReq::new(vec![
+        let select_req = SelectReq::new(vec![
             (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));

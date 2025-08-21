@@ -39,55 +39,55 @@ mod select_cot {
             (
                 01,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req1", "data": "Request1 01" }),
+                json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Request1 01"} }),
                 Ok(json!({ "data": "Reply1 01" })),
             ),
             (
                 02,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req2", "data": "Request2 02" }),
+                json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Request2 02"} }),
                 Ok(json!({ "data": "Reply2 02" })),
             ),
             (
                 03,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req3", "data": "Request3 03" }),
+                json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Request3 03"} }),
                 Ok(json!({ "data": "Reply3 03" })),
             ),
             (
                 04,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req1", "data": "Error 04" }),
+                json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req2", "data": "Error 05" }),
+                json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Error 05"} }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "req": "Req3", "data": "Error 06" }),
+                json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Error 06"} }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
             (
                 07,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "act": "Cmd1", "data": "Command1 07" }),
+                json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 07"} }),
                 Ok(json!({ "data": "CmdReply1 07" })),
             ),
             (
                 08,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "act": "Cmd2", "data": "Command2 08" }),
+                json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 08"} }),
                 Ok(json!({ "data": "CmdReply2 08" })),
             ),
             (
                 09,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "act": "Cmd3", "data": "Command3 09" }),
+                json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 09"} }),
                 Ok(json!({ "data": "CmdReply3 09" })),
             ),
         ];
@@ -141,10 +141,6 @@ mod select_cot {
         ]);
         for (step, req_cot, req, target) in test_data {
             let query: Query<Request> = serde_json::from_value(req).unwrap();
-            //  BytesCtx {
-            //     msg_id: step,
-            //     bytes,
-            // };
             match req_cot {
                 Cot::Act => {
                     let (loc, rem) = Link::split(&dbg);

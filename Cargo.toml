@@ -25,7 +25,6 @@ indexmap = "~2.10"
 #
 # Thread safe
 kanal = "~0.1"
-coco = "~0.3"
 papaya = "~0.2"
 #
 # Misc

@@ -37,32 +37,32 @@ mod select_act {
         let test_data = [
             (
                 01,
-                json!({ "cot": Cot::Act, "act": "Cmd1", "data": "Command1 01" }),
+                json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 01"} }),
                 Ok(json!({ "data": "CmdReply1 01" })),
             ),
             (
                 02,
-                json!({ "cot": Cot::Act, "act": "Cmd2", "data": "Command2 02" }),
+                json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 02"} }),
                 Ok(json!({ "data": "CmdReply2 02" })),
             ),
             (
                 03,
-                json!({ "cot": Cot::Act, "act": "Cmd3", "data": "Command3 03" }),
+                json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 03"} }),
                 Ok(json!({ "data": "CmdReply3 03" })),
             ),
             (
                 04,
-                json!({ "cot": Cot::Req, "act": "Cmd1", "data": "Error 04" }),
+                json!({ "cot": Cot::Req, "name": "Cmd1", "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                json!({ "cot": Cot::Req, "act": "Cmd2", "data": "Error 04" }),
+                json!({ "cot": Cot::Req, "name": "Cmd2", "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                json!({ "cot": Cot::Req, "act": "Cmd3", "data": "Error 04" }),
+                json!({ "cot": Cot::Req, "name": "Cmd3", "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];

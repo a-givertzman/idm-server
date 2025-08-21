@@ -1,8 +1,7 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{Duration, Instant}};
-use coco::Stack;
 use rand::Rng;
 use sal_core::dbg::Dbg;
-use sal_sync::{services::ServiceCycle, thread_pool::{JoinHandle, Scheduler}};
+use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
 use serde::{Deserialize, Serialize};
 use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Query, Request}};
 use super::{DevConf, DevStreamConf};
@@ -14,7 +13,7 @@ pub struct DevStream {
     conf: DevStreamConf,
     scheduler: Scheduler,
     is_active: Arc<AtomicBool>,
-    handle: Stack<JoinHandle<()>>,
+    handle: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -27,36 +26,26 @@ impl DevStream {
         conf: DevStreamConf,
         scheduler: Scheduler,
     ) -> Self {
+        let dbg = Dbg::new(parent.into(), "DevStream");
         Self {
-            dbg: Dbg::new(parent.into(), "DevStream"),
             conf,
             scheduler,
             is_active: Arc::new(AtomicBool::new(false)),
-            handle: Stack::new(),
+            handle: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
     /// Wait for inner thread being finished
     pub fn wait(&self) -> Result<(), Error> {
-        log::warn!("{}.цфше | Checking threads...", self.dbg);
-        while !self.handle.is_empty() {
-            log::warn!("{}.wait | Some threads found, waiting...", self.dbg);
-            match self.handle.pop() {
-                Some(h) => {
-                    let error = Error::new("DevStream", "wait");
-                    h.join().map_err(|err| error.pass(err)).unwrap();
-                }
-                _ => break,
-            }
-        }
-        Ok(())
+        self.handle.wait()
     }
 }
 //
 //
 impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
-    fn eval(&self, (query, link): (Query<Request>, Option<Link>)) -> EvalResult {
+    fn eval(&self, (_query, link): (Query<Request>, Option<Link>)) -> EvalResult {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(None),
@@ -65,7 +54,7 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
                     let dbg = self.dbg.clone();
                     let conf = self.conf.clone();
                     let exit = self.exit.clone();
-                    log::warn!("{dbg}.eval | Staring...");
+                    log::info!("{dbg}.eval | Staring...");
                     let handle = self.scheduler.spawn(move || {
                         let mut devices: Vec<Device> = conf.devices.iter().map(|(id, conf)| {
                             Device::new(
@@ -84,7 +73,7 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
                                     *dev = Device::from(dev.clone());
                                     match serde_json::to_vec(&dev) {
                                         Ok(bytes) => {
-                                            log::warn!("{dbg}.eval | Sending dev.id: {}", dev.id);
+                                            log::trace!("{dbg}.eval | Sending dev.id: {}", dev.id);
                                             // log::warn!("{dbg}.eval | Sending dev: {:?}", String::from_utf8_lossy(&bytes));
                                             let event = Event::new(dev.id.parse().unwrap(), bytes);
                                             // log::warn!("{dbg}.eval | Sending event: {:?}", event);
@@ -101,19 +90,14 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
                             }
                             cycle.wait();
                         }
-                        log::warn!("{dbg}.eval | Exit");
+                        log::info!("{dbg}.eval | Exit");
                         Ok(())
-                    });
+                    })
+                        .map_err(|err| Error::new(&self.dbg, "eval").pass(err))?;
                     let dbg = self.dbg.clone();
-                    let error = Error::new(&self.dbg, "eval");
-                    match handle {
-                        Ok(handle) => {
-                            self.handle.push(handle);
-                            log::warn!("{dbg}.eval | Staring - Ok");
-                            Ok(None)
-                        }
-                        Err(err) => Err(error.pass(err)),
-                    }
+                    self.handle.push(handle);
+                    log::info!("{dbg}.eval | Staring - Ok");
+                    Ok(None)
                 }
                 None => Err(error.err("Link is missing")),
             },

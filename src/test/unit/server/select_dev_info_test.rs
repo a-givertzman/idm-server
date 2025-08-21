@@ -38,7 +38,7 @@ mod select_dev_info {
             (
                 01,
                 "Device-111",
-                json!({"data": {"devId": "Device-111"}}),
+                json!({"dev-id": "Device-111"}),
                 json!({
                     "cot": "req",
                     "data": DeviceInfo::new(
@@ -60,7 +60,7 @@ mod select_dev_info {
             (
                 02,
                 "Device-222",
-                json!({"data": {"devId": "Device-222"}}),
+                json!({"dev-id": "Device-222"}),
                 json!({
                     "cot": "req",
                     "data": DeviceInfo::new(
@@ -83,7 +83,7 @@ mod select_dev_info {
             (
                 03,
                 "Device-333",
-                json!({"data": {"devId": "Device-333"}}),
+                json!({"dev-id": "Device-333"}),
                 json!({
                     "cot": "req",
                     "data": DeviceInfo::new(

@@ -23,7 +23,8 @@ impl SelectDevInfo {
 impl EvalEx<Query<Request>, EvalResult> for SelectDevInfo {
     fn eval(&self, query: Query<Request>) -> EvalResult {
         let error = Error::new("SelectDevInfo", "eval");
-        match query.content.get("dev-id") {
+        let key = "dev-id";
+        match query.content.get(key) {
             Some(cot) => {
                 match serde_json::from_value(cot.to_owned()) {
                     Ok(dev_id) => {
@@ -35,7 +36,7 @@ impl EvalEx<Query<Request>, EvalResult> for SelectDevInfo {
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", query))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
         }
     }
     fn exit(&self) {
