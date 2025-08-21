@@ -4,9 +4,8 @@ use api_tools::api::message::{
     message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData,
     parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn,
 };
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{Scheduler, JoinHandle};
+use sal_sync::{sync::{Handles, Owner}, thread_pool::{JoinHandle, Scheduler}};
 use crate::{
     domain::{Eval, Hub, JsonVal, Link, TcpMessage}, server::ConnectionConf
 };
@@ -17,10 +16,10 @@ use super::{BytesCtx, Event, JsonCtx, Reply};
 pub struct Connection {
     dbg: Dbg,
     conf: ConnectionConf,
-    stream: Stack<TcpStream>,
+    stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Stack<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send>>,
-    handle: Stack<JoinHandle<()>>,
+    ctx: Owner<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send>>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
     hub_exit: Arc<AtomicBool>,
 }
@@ -36,19 +35,16 @@ impl Connection {
         scheduler: Scheduler,
         ctx: impl Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static,
     ) -> Self {
-        let stream_ = Stack::new();
-        stream_.push(stream);
-        let ctx_: Stack<Box<dyn Eval<(BytesCtx, Option<Link>), Result<JsonCtx, Error>> + Send + 'static>> = Stack::new();
-        ctx_.push(Box::new(ctx));
+        let dbg = Dbg::new(parent.into(), "Connection");
         Self {
-            dbg: Dbg::new(parent.into(), "Connection"),
             conf,
-            stream: stream_,
+            stream: Owner::new(stream),
             scheduler,
-            ctx: ctx_,
-            handle: Stack::new(),
+            ctx: Owner::new(Box::new(ctx)),
+            handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
             hub_exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
@@ -99,16 +95,17 @@ impl Connection {
     /// [Connection] Operation mode
     pub fn run(&self) -> Result<(), Error> {
         let dbg = self.dbg.clone();
+        let error = Error::new(&self.dbg, "run");
         let conf = self.conf.clone();
-        let stream = self.stream.pop().unwrap();
+        let stream = self.stream.take().ok_or(error.err(format!("Can't take ctx")))?;
         self.set_tcp_timeout(&stream, conf.timeout);
-        let mut ctx = self.ctx.pop().unwrap();
+        let mut ctx = self.ctx.take().ok_or(error.err(format!("Can't take ctx")))?;
         let mut r_stream = BufReader::new(stream.try_clone().unwrap());
         let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
-        let send_result = self.send(stream.try_clone().unwrap(), hub.clone());
+        self.send(&stream, hub.clone())?;
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
-            let error = Error::new("Connection", "run");
+            let error = Error::new(&dbg, "run");
             let link = hub.link();
             let mut message = Self::tcp_message(&dbg);
             let mut buf = [0u8; 1024 * 4];
@@ -172,34 +169,19 @@ impl Connection {
                 }
             }
             Ok(())
-        });
-        let error = Error::new(&self.dbg, "run");
-        match (handle, send_result) {
-            (Ok(handle), Ok(_)) => {
-                self.handle.push(handle);
-                Ok(())
-            }
-            (Ok(_), Err(err)) => {
-                self.exit();
-                Err(error.pass(err))
-            }
-            (Err(err), Ok(_)) => {
-                self.exit();
-                Err(error.pass(err))
-            }
-            (Err(r_err), Err(_w_err)) => {
-                self.exit();
-                Err(error.pass(r_err))
-            }
-        }
+        })?;
+        self.handles.push(handle);
+        Ok(())
     }
     ///
-    /// Sends messages to the socket
-    fn send(&self, stream: TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
+    /// Sends messages to the TCP Socket
+    fn send(&self, stream: &TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
-        let mut w_stream = BufWriter::new(stream.try_clone().unwrap());
+        let error = Error::new(&dbg, "send");
+        let stream = stream.try_clone().map_err(|err| error.pass_with(format!("stream.try_clone error"), err.to_string()))?;
         let hub_exit = self.hub_exit.clone();
         let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
+            let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             let bytes = message.build(&event.bytes, event.msg_id);
             if let Err(err) = w_stream.write_all(&bytes) {
@@ -210,15 +192,9 @@ impl Connection {
                 hub_exit.store(true, Ordering::SeqCst);
             }
             None
-        });
-        let error = Error::new(&self.dbg, "send");
-        match handle {
-            Ok(handle) => {
-                self.handle.push(handle);
-                Ok(())
-            }
-            Err(err) => Err(error.pass(err)),
-        }
+        })?;
+        self.handles.push(handle);
+        Ok(())
     }
     ///
     /// Returns Connection status dipending on IO Error
@@ -281,11 +257,7 @@ impl Connection {
     /// Returns when internal thread's will finished
     #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "wait");
-        match self.handle.pop() {
-            Some(handle) => handle.join().map_err(|err| error.pass(format!("{:?}", err))),
-            None => Err(error.err("No handle")),
-        }
+        self.handles.wait()
     }
     ///
     /// Sends exit signal to main tread
