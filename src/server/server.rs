@@ -68,7 +68,6 @@ impl Server {
                                                             &dbg,
                                                             conf.dev_stream.clone(),
                                                             scheduler.clone(),
-
                                                         ))),
                                                     ]
                                                 ))),
