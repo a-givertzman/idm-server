@@ -32,7 +32,7 @@ impl<FieldIn, FieldOut, Out> SizedField<FieldIn, FieldOut, Out> {
     fn convert(&mut self, remainder: Vec<u8>, size: usize) -> Result<(Out, Bytes), Error> {
         if remainder.len() >= size {
             let bytes = &remainder[..size];
-            log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, size, bytes);
+            // log::debug!("{}.parse | Bytes from remainder[{}]: {:?}", self.dbg, size, bytes);
             self.reset();
             match (self.from_bytes)(&self.dbg, bytes) {
                 Ok(data) => if remainder.len() >= size {
@@ -63,13 +63,13 @@ impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(Fi
     /// - call this method multiple times, until the end of message
     fn parse(&mut self, bytes: Bytes) -> Result<((FieldIn, FieldOut), Out, Bytes), Error> {
         let error = Error::new(&self.dbg, "parse");
-        let dbg = self.dbg.clone();
+        // let dbg = self.dbg.clone();
         let remainder = [std::mem::take(&mut self.remainder), bytes].concat();
-        log::debug!("{dbg}.parse | remainder: {:?}", remainder);
+        // log::debug!("{dbg}.parse | remainder: {:?}", remainder);
         match self.field_data {
             Some((din, dout)) => match self.convert(remainder, (self.size)(&din, &dout)) {
                 Ok((data, remainder)) => {
-                    log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
+                    // log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
                     Ok(((din, dout), data, remainder))
                 }
                 Err(err) => Err(error.pass_with("Field value from bytes error", err)),
@@ -78,7 +78,7 @@ impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(Fi
                 match self.field.parse(remainder) {
                     Ok((din, dout, remainder)) => match self.convert(remainder, (self.size)(&din, &dout)) {
                         Ok((data, remainder)) => {
-                            log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
+                            // log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
                             Ok(((din, dout), data, remainder))
                         }
                         Err(err) => {

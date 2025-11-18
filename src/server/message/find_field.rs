@@ -90,13 +90,13 @@ impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(Fi
     /// - call this method multiple times, until the end of message
     fn parse(&mut self, bytes: Bytes) -> Result<((FieldIn, FieldOut), Out, Bytes), Error> {
         let error = Error::new(&self.dbg, "parse");
-        let dbg = self.dbg.clone();
+        // let dbg = self.dbg.clone();
         let remainder = [std::mem::take(&mut self.remainder), bytes].concat();
-        log::debug!("{dbg}.parse | remainder: {:?}", remainder);
+        // log::debug!("{dbg}.parse | remainder: {:?}", remainder);
         match self.field_data {
             Some((din, dout)) => match self.convert(remainder) {
                 Ok((data, remainder)) => {
-                    log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
+                    // log::debug!("{}.parse | Field exist | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
                     Ok(((din, dout), data, remainder))
                 }
                 Err(err) => Err(error.pass(err)),
@@ -106,7 +106,7 @@ impl<FieldIn: Copy + Debug, FieldOut: Copy + Debug, Out: Debug> MessageParse<(Fi
                     Ok((din, dout, remainder)) => {
                         match self.convert(remainder) {
                             Ok((data, remainder)) => {
-                                log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
+                                // log::debug!("{}.parse | Field parsed | din: {:?}, dout: {:?}, data: {:?}, remainder: {:?}", dbg, din, dout, data, remainder);
                                 Ok(((din, dout), data, remainder))
                             }
                             Err(err) => {

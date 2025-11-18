@@ -1,7 +1,7 @@
 #[cfg(test)]
 
 mod message {
-    use std::{sync::Once, time::Duration};
+    use std::{sync::Once, time::{Duration, Instant}};
     use sal_core::{dbg::Dbg, error::Error};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -181,7 +181,7 @@ mod message {
                         result_bytes.extend(bytes);
                     }
                     Err(err) => {
-                        log::warn!("{} | {}",dbg, err);
+                        log::trace!("{} | {}",dbg, err);
                     }
                 }
             }
@@ -353,6 +353,7 @@ mod message {
         );
         for (step, messages, (target_id, target_kind, target_cot, FieldSize(target_size), target_bytes)) in test_data {
             let mut result_data = None;
+            let mut time = Instant::now();
             for bytes in messages {
                 match message.parse(bytes) {
                     Ok((((((_, id), kind), cot), size), bytes)) => {
@@ -368,9 +369,11 @@ mod message {
                         let result = bytes;
                         assert!(result == target_bytes, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target_bytes);
                         result_data = Some(result);
+                        log::debug!("{} | step {step}  elapsed: {:?}",dbg, time.elapsed());
+                        time = Instant::now()
                     }
                     Err(err) => {
-                        log::debug!("{} | {}",dbg, err);
+                        log::trace!("{} | {}",dbg, err);
                     }
                 }
             }
