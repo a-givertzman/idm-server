@@ -166,6 +166,7 @@ mod message {
         );
         for (step, messages, target_id, target_kind, target_cot, FieldSize(target_size), target_bytes) in test_data {
             let mut result_bytes = vec![];
+            let mut time = Instant::now();
             for bytes in messages {
                 match message.parse(bytes) {
                     Ok((((((_, id), kind), cot), size), bytes)) => {
@@ -179,6 +180,8 @@ mod message {
                         let result = size;
                         assert!(result == target_size, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target_size);
                         result_bytes.extend(bytes);
+                        log::debug!("{} | step {step}  elapsed: {:?}",dbg, time.elapsed());
+                        time = Instant::now()
                     }
                     Err(err) => {
                         log::trace!("{} | {}",dbg, err);

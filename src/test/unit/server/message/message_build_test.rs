@@ -1,8 +1,8 @@
 #[cfg(test)]
 
 mod message {
-    use std::{sync::Once, time::Duration};
-    use sal_core::{dbg::Dbg, error::Error};
+    use std::{sync::Once, time::{Duration, Instant}};
+    use sal_core::dbg::Dbg;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::server::{Cot, Field, FieldConf, FieldTerminator, Message, MessageKind};
@@ -65,6 +65,7 @@ mod message {
         for (step, data, id, target) in test_data {
             log::debug!("{} | step: {},  id: {},  kind: {:?},  size: {},  data: {:?}", dbg, step, id, target[1], target[6..].len(), data);
             let data = data.as_bytes().to_vec();
+            let time = Instant::now();
             let result = message.build(&[
                 Field::Const,
                 Field::U32(id),
@@ -73,6 +74,7 @@ mod message {
                 Field::U32(data.len() as u32),
                 Field::Bytes(data),
             ]);
+            log::debug!("{} | step {step}  elapsed: {:?}",dbg, time.elapsed());
                 // data.as_bytes().to_owned().as_mut(), id]);
             assert!(result == target, "step: {} \nresult: {:?}\ntarget: {:?}", step, result, target);
         }
