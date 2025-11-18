@@ -1,13 +1,8 @@
 use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
-use api_tools::api::message::{
-    fields::{FieldData, FieldId, FieldKind, FieldSize, FieldSyn},
-    message::{MessageField, MessageParse}, message_kind::MessageKind, parse_data::ParseData,
-    parse_id::ParseId, parse_kind::ParseKind, parse_size::ParseSize, parse_syn::ParseSyn,
-};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
-    domain::{EvalEx, Hub, JsonVal, Link, TcpMessage}, server::{ConnectionConf, EvalResult, Query, ReplyError, Request}
+    domain::{EvalEx, Hub, JsonVal, Link}, server::{ConnectionConf, Cot, EvalResult, Field, FieldConf, FieldId, FieldTerminator, FindField, FixedField, Message, MessageKind, Query, ReplyError, Request, SizedField}
 };
 use super::{Event, Reply};
 
@@ -49,35 +44,77 @@ impl Connection {
     }
     ///
     /// Setups TCP Message
-    fn tcp_message(dbg: &Dbg) -> TcpMessage {
-        TcpMessage::new(
-            dbg,
+    fn tcp_message(dbg: &Dbg) -> Message<(((((((), ()), ()), FieldId), MessageKind), Cot), u32), Vec<u8>> {
+        let syn = 0x22;
+        Message::new(
+            dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
             vec![
-                MessageField::Syn(FieldSyn::default()),
-                MessageField::Id(FieldId(4)),
-                MessageField::Kind(FieldKind(MessageKind::Bytes)),
-                MessageField::Size(FieldSize(4)),
-                MessageField::Data(FieldData(vec![]))
+                FieldConf::Const(vec![syn]),    // Syn
+                FieldConf::U32Be,               // ID
+                FieldConf::Byte,                // Kind
+                FieldConf::Byte,                // Cot
+                FieldConf::U32Be,               // Size
+                FieldConf::Bytes,               // Payload bytes
             ],
-            ParseData::new(
+            SizedField::new(
                 dbg,
-                ParseSize::new(
+                |_, size| *size as usize,
+                |_, bytes| {
+                    Ok(bytes.to_vec())
+                },
+                FixedField::new(        // Size | u32
                     dbg,
-                    FieldSize(4),
-                    ParseKind::new(
+                    4,
+                    |dbg, bytes| {
+                        match bytes.try_into() {
+                            Ok(bytes) => Ok(u32::from_be_bytes(bytes)),
+                            Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with(format!("Can't parse 'Size' u32 filed from bytes {:?}", bytes), format!("{err}"))),
+                        }
+                    },
+                    FixedField::new(        // Cot | u8
                         dbg,
-                        FieldKind(MessageKind::Bytes),
-                        ParseId::new(
+                        1,
+                        |dbg, bytes| {
+                            match Cot::from_bytes(bytes) {
+                                Ok(cot) => Ok(cot),
+                                Err(err) => Err(Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", format!("{err}"))),
+                            }
+                        },
+                        FixedField::new(        // Kind | u8
                             dbg,
-                            FieldId(4),
-                            ParseSyn::new(
+                            1,
+                            |dbg, bytes| {
+                                match MessageKind::try_from(bytes) {
+                                    Ok(kind) => Ok(kind),
+                                    Err(err) => Err(Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", format!("{err}"))),
+                                }
+                            },
+                            FixedField::new(        // ID | u32
                                 dbg,
-                                FieldSyn::default(),
+                                4,
+                                |dbg, bytes| {
+                                    match FieldId::from_bytes(bytes) {
+                                        Ok(id) => Ok(id),
+                                        Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'ID' u32 filed", format!("{err}"))),
+                                    }
+                                },
+                                FindField::new(        // SYN | u8
+                                    dbg,
+                                    1,
+                                    |dbg, bytes| {
+                                        match bytes {
+                                            [syn] | [syn, ..] => Ok(Some(())),
+                                            [_] | [_, ..] => Ok(None),
+                                            [] => Ok(None)
+                                        }
+                                    },
+                                    FieldTerminator::new(),
+                                ),
                             ),
                         ),
                     ),
                 ),
-            ),
+            )
         )
     }
     ///
@@ -113,9 +150,50 @@ impl Connection {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
-                            Ok((FieldId(msg_id), kind, _, bytes)) => {
+                            Ok((((((_, FieldId(msg_id)), kind), cot), _), bytes)) => {
                                 match kind {
                                     MessageKind::Bytes => {
+                                        match serde_json::from_slice(&bytes) {
+                                            Ok(query) => {
+                                                let reply = match ctx.eval((query, Some(hub.link()))) {
+                                                    Ok(reply) => reply.map(|reply| Reply {
+                                                        data: reply,
+                                                        error: None,
+                                                    }),
+                                                    Err(err) => Some(Reply {
+                                                        data: JsonVal::Null,
+                                                        error: Some(ReplyError::new(
+                                                            error.pass(err).to_string()
+                                                        )),
+                                                    }),
+                                                };
+                                                if let Some(reply) = reply {
+                                                    match serde_json::to_vec(&reply) {
+                                                        Ok(bytes) => {
+                                                            if let Err(err) = link.send(Event::new(msg_id, bytes)) {
+                                                                log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                                            }
+                                                        }
+                                                        Err(err) => {
+                                                            log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Err(err) => {
+                                                match std::str::from_utf8(&bytes) {
+                                                    Ok(req) => log::warn!("{}", error.pass_with(format!("Request can't be parsed from {:#?}", req), err.to_string())),
+                                                    Err(err) => log::warn!("{}",
+                                                        error.pass_with(
+                                                            format!("Request can't be parsed from bytes into string, bytes:\n\t{:?}", bytes),
+                                                            err.to_string(),
+                                                        ),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                    MessageKind::Json => {
                                         match serde_json::from_slice(&bytes) {
                                             Ok(query) => {
                                                 let reply = match ctx.eval((query, Some(hub.link()))) {
@@ -193,7 +271,22 @@ impl Connection {
         let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
             let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
-            let bytes = message.build(&event.bytes, event.msg_id);
+            // let bytes = message.build(&event.bytes, event.msg_id);
+                // FieldConf::Const(vec![0x22]),   // Syn
+                // FieldConf::Bytes,               // ID
+                // FieldConf::Byte,                // Kind
+                // FieldConf::Byte,                // Cot
+                // FieldConf::U32Be,               // Size
+                // FieldConf::Bytes,               // Payload bytes
+
+            let bytes = message.build(&[
+                Field::Const,
+                Field::U32(event.msg_id),
+                Field::Byte(MessageKind::Bytes as u8),
+                Field::Byte(Cot::Inf as u8),
+                Field::U32(event.bytes.len() as u32),
+                Field::Bytes(event.bytes),
+            ]);
             if let Err(err) = w_stream.write_all(&bytes) {
                 log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
                 if let Err(err) = Self::close(&dbg, &stream) {

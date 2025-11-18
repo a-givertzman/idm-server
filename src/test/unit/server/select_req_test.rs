@@ -7,7 +7,7 @@ mod select_req {
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::EvalEx, server::{Query, SelectReq}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
@@ -27,7 +27,7 @@ mod select_req {
     /// Testing such functionality / behavior
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let dbg = Dbg::own("select_req.eval");

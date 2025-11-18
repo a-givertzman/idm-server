@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{device::{DevId, DeviceDoc}, domain::EvalEx, server::DeviceInfoRequest};
 ///
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn eval() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = Dbg::own("device_info.eval");

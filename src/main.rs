@@ -5,7 +5,7 @@ mod device;
 #[cfg(test)]
 mod test;
 use conf::Conf;
-use debugging::session::debug_session::{Backtrace, DebugSession, LogLevel};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use server::Server;
@@ -13,7 +13,7 @@ use server::Server;
 ///
 /// Application entry point
 fn main() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     let dbg = Dbg::own("idm-server");
 
     let thread_pool = ThreadPool::new(&dbg, Some(12));

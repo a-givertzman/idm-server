@@ -1,3 +1,4 @@
+mod message;
 mod select_act;
 mod select_req;
 mod connection_conf;
@@ -10,6 +11,7 @@ mod select_cot;
 mod server_conf;
 mod server;
 
+pub(crate) use  message::*;
 pub(crate) use  select_act::*;
 pub(crate) use  select_req::*;
 pub(crate) use  connection_conf::*;

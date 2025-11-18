@@ -7,7 +7,7 @@ mod select_dev_info {
     use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{device::DevId, domain::{EvalEx, JsonVal}, server::{EvalResult, Query, Request, SelectDevInfo}};
     ///
     ///
@@ -27,7 +27,7 @@ mod select_dev_info {
     /// Testing such functionality / behavior
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let dbg = Dbg::own("select_dev_info.eval");

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 mod dev_stream_test;
 mod device_doc_test;
 mod device_info_test;
+mod message;
 
 mod fake_select_act;
 mod fake_select_req;

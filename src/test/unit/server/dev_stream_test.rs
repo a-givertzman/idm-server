@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::{services::entity::Cot, thread_pool::ThreadPool};
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
-use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+use debugging::session::debug_session::{DebugSession, LogLevel};
 use crate::{domain::{EvalEx, Link}, server::{DevStream, DevStreamConf, Device, Event, Query, Request}};
 ///
 ///
@@ -25,7 +25,7 @@ fn init_each() -> () {}
 /// Testing such functionality / behavior
 #[test]
 fn eval() {
-    DebugSession::init(LogLevel::Debug, Backtrace::Short);
+    DebugSession::new().filter(LogLevel::Debug).init();
     init_once();
     init_each();
     let dbg = Dbg::own("DevStream-test");

@@ -7,7 +7,7 @@ mod select_cot {
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct, SelectCot, SelectReq}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
@@ -28,7 +28,7 @@ mod select_cot {
     /// Testing such functionality / behavior
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let dbg = Dbg::own("select_cot.eval");

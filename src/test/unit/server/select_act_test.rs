@@ -6,7 +6,7 @@ mod select_act {
     use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
-    use debugging::session::debug_session::{DebugSession, LogLevel, Backtrace};
+    use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command};
     ///
@@ -27,7 +27,7 @@ mod select_act {
     /// Testing such functionality / behavior
     #[test]
     fn eval() {
-        DebugSession::init(LogLevel::Debug, Backtrace::Short);
+        DebugSession::new().filter(LogLevel::Debug).init();
         init_once();
         init_each();
         let dbg = Dbg::own("select_act.eval");
