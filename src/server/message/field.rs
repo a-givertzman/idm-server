@@ -133,16 +133,46 @@ impl Field {
                 let [v0, v1] = val.to_be_bytes();
                 vec![v0, v1]
             }
-            Field::U32(val) => val.to_be_bytes().to_vec(),
-            Field::U64(val) => val.to_be_bytes().to_vec(),
-            Field::U128(val) => val.to_be_bytes().to_vec(),
-            Field::I8(val) => val.to_be_bytes().to_vec(),
-            Field::I16(val) => val.to_be_bytes().to_vec(),
-            Field::I32(val) => val.to_be_bytes().to_vec(),
-            Field::I64(val) => val.to_be_bytes().to_vec(),
-            Field::I128(val) => val.to_be_bytes().to_vec(),
-            Field::F32(val) => val.to_be_bytes().to_vec(),
-            Field::F64(val) => val.to_be_bytes().to_vec(),
+            Field::U32(val) => {
+                let [v0, v1, v2, v3] = val.to_be_bytes();
+                vec![v0, v1, v2, v3]
+            }
+            Field::U64(val) => {
+                let [v0, v1, v2, v3, v4, v5, v6, v7] = val.to_be_bytes();
+                vec![v0, v1, v2, v3, v4, v5, v6, v7]
+            }
+            Field::U128(val) => {
+                let [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15] = val.to_be_bytes();
+                vec![v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15]
+            }
+            Field::I8(val) => {
+                let [v0] = val.to_be_bytes();
+                vec![v0]
+            }
+            Field::I16(val) => {
+                let [v0, v1] = val.to_be_bytes();
+                vec![v0, v1]
+            }
+            Field::I32(val) => {
+                let [v0, v1, v2, v3] = val.to_be_bytes();
+                vec![v0, v1, v2, v3]
+            }
+            Field::I64(val) => {
+                let [v0, v1, v2, v3, v4, v5, v6, v7] = val.to_be_bytes();
+                vec![v0, v1, v2, v3, v4, v5, v6, v7]
+            }
+            Field::I128(val) => {
+                let [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15] = val.to_be_bytes();
+                vec![v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15]
+            }
+            Field::F32(val) => {
+                let [v0, v1, v2, v3] = val.to_be_bytes();
+                vec![v0, v1, v2, v3]
+            }
+            Field::F64(val) => {
+                let [v0, v1, v2, v3, v4, v5, v6, v7] = val.to_be_bytes();
+                vec![v0, v1, v2, v3, v4, v5, v6, v7]
+            }
             Field::Json(val) => val.as_bytes().to_vec(),
             Field::String(val) => val.as_bytes().to_vec(),
             Field::Byte(val) => vec![*val],

@@ -45,11 +45,11 @@ impl Connection {
     ///
     /// Setups TCP Message
     fn tcp_message(dbg: &Dbg) -> Message<(((((((), ()), ()), FieldId), MessageKind), Cot), u32), Vec<u8>> {
-        let syn = 0x22;
+        const SYN: u8 = 0x22;
         Message::new(
             dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
             vec![
-                FieldConf::Const(vec![syn]),    // Syn
+                FieldConf::Const(vec![SYN]),    // Syn
                 FieldConf::U32Be,               // ID
                 FieldConf::Byte,                // Kind
                 FieldConf::Byte,                // Cot
@@ -101,9 +101,9 @@ impl Connection {
                                 FindField::new(        // SYN | u8
                                     dbg,
                                     1,
-                                    |dbg, bytes| {
+                                    |_, bytes| {
                                         match bytes {
-                                            [syn] | [syn, ..] => Ok(Some(())),
+                                            [SYN] | [SYN, ..] => Ok(Some(())),
                                             [_] | [_, ..] => Ok(None),
                                             [] => Ok(None)
                                         }
@@ -154,7 +154,13 @@ impl Connection {
                                 match kind {
                                     MessageKind::Bytes => {
                                         match serde_json::from_slice(&bytes) {
-                                            Ok(query) => {
+                                            Ok(request) => {
+                                                let query = Query {
+                                                    msg_id,
+                                                    name: (),
+                                                    cot: cot,
+                                                    content: request,
+                                                };
                                                 let reply = match ctx.eval((query, Some(hub.link()))) {
                                                     Ok(reply) => reply.map(|reply| Reply {
                                                         data: reply,
