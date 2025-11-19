@@ -1,7 +1,6 @@
-use std::{fs::OpenOptions, io::Read, path::{Path, PathBuf}};
+use std::{fs::OpenOptions, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use crate::{device::DevId, domain::{Error, EvalEx}, server::EvalResult};
+use crate::{device::DevId, domain::{Error, EvalEx}};
 ///
 /// Reply to `DeviceDoc` request
 /// - Provides basic overview info by device
@@ -61,37 +60,32 @@ impl DeviceDoc {
     }
     ///
     /// Returns [DeviceDoc] read from path 
-    fn read<P: AsRef<Path>>(path: P) -> Result<String, Error> {
+    fn read<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let error = Error::new("DeviceDoc", "read");
         let file = OpenOptions::new()
             .read(true)
             .open(path);
         match file {
-            Ok(mut file) => {
-                let mut buf = String::new();
-                match file.read_to_string(&mut buf) {
-                    Ok(_) => Ok(buf),
-                    Err(err) => Err(error.pass(err.to_string())),
-                }
-            }
+            Ok(file) => serde_json::from_reader(file).map_err(|err| error.pass(err.to_string())),
             Err(err) => Err(error.pass(err.to_string())),
         }
     }
 }
 //
 //
-impl EvalEx<DevId, EvalResult> for DeviceDoc {
+impl EvalEx<DevId, Result<Self, Error>> for DeviceDoc {
     //
-    //
-    fn eval(&self, id: DevId) -> EvalResult {
+    fn eval(&self, id: DevId) -> Result<Self, Error> {
         let error = Error::new("DeviceDoc", "eval");
         let path = self.path.join(format!("{}.md", id.0));
         match Self::read(path) {
-            Ok(value) => Ok(Some(json!({"doc": value}))),
+            Ok(value) => Ok(value),
             Err(err) => Err(error.pass(err)),
         }
     }
     //
     //
-    fn exit(&self) {}
+    fn exit(&self) {
+        // Halt continuous operations here
+    }
 }

@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use super::DevConf;
+use crate::device::DevConf;
 
 ///
 /// The `DevStream`'s configuration

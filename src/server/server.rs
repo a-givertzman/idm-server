@@ -1,8 +1,8 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{collections::FxDashMap, services::entity::Cot, sync::Handles, thread_pool::Scheduler};
-use crate::{device::{DeviceDoc, DeviceInfo}, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_req::SelectReq, Request, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
+use sal_sync::{collections::FxDashMap, sync::Handles, thread_pool::Scheduler};
+use crate::server::{Connection, Cot, ServerConf};
+use super::{select_cot::SelectCot, select_req::SelectReq, QueryId, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -57,14 +57,14 @@ impl Server {
                                         stream,
                                         scheduler.clone(),
                                         //
-                                        // Handling incomong messages by Cot
+                                        // Select handler for incomong messages by Cot
                                         SelectCot::new(
                                             vec![
                                                 // Handling incomong messages with `Cot::Act` by field `cmd`
                                                 (Cot::Act, Box::new(SelectAct::new(
                                                     vec![
                                                         // Handling incomong command `DeviceStream`
-                                                        (Request::DeviceStream, Box::new(DevStream::new(
+                                                        (QueryId::DeviceStream, Box::new(DevStream::new(
                                                             &dbg,
                                                             conf.dev_stream.clone(),
                                                             scheduler.clone(),
@@ -75,13 +75,9 @@ impl Server {
                                                 (Cot::Req, Box::new(SelectReq::new(
                                                     vec![
                                                         // Handling incomong request `DeviceInfo`
-                                                        (Request::DeviceInfo, Box::new(SelectDevInfo::new(
-                                                            DeviceInfo::from_path("assets/info/"),
-                                                        ))),
+                                                        (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
                                                         // Handling incomong request `DeviceDoc`
-                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new(
-                                                            DeviceDoc::from_path("assets/info/"),
-                                                        ))),
+                                                        (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
                                                     ]
                                                 ))),
                                             ],
@@ -90,6 +86,15 @@ impl Server {
                                     match conn.run() {
                                         Ok(_) => _ = connections.insert(client, conn),
                                         Err(err) => log::warn!("{dbg}.run | Spawn connection error: {:?}", err),
+                                    }
+                                    let keys: Vec<String> = connections.iter().map(|e| e.key().clone()).collect();
+                                    for key in keys {
+                                        if let Some(con) =  connections.get(&key) {
+                                            if con.value().is_finished() {
+                                                con.exit();
+                                                connections.remove(&key);
+                                            }
+                                        }
                                     }
                                 }
                                 Err(err) => log::warn!("{dbg}.run | Get TcpStream error: {:?}", err),
@@ -103,6 +108,9 @@ impl Server {
                 }
                 std::thread::sleep(Duration::from_secs(1));
                 if exit.load(Ordering::SeqCst) {
+                    for con in connections.iter() {
+                        con.value().exit();
+                    }
                     break 'main;
                 }
             }

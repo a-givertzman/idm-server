@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, hash::Hash, fmt::Debug};
 use serde_json::json;
-use crate::{domain::{Error, EvalEx}, server::{EvalResult, Query}};
+use crate::{domain::{Error, EvalEx}, server::{EvalResult, Request}};
 
 ///
 /// Fake Req1 handler
@@ -20,11 +20,11 @@ impl FakeSelectReq1 {
 }
 //
 //
-impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq1 {
-    fn eval(&self, query: Query<R>) -> EvalResult {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Request<R>, EvalResult> for FakeSelectReq1 {
+    fn eval(&self, query: Request<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq1", "eval");
         let key = "data";
-        match query.content.get(key) {
+        match query.query.get(key) {
             Some(val) => {
                 match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
@@ -36,7 +36,7 @@ impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Quer
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.query))),
         }
     }
     fn exit(&self) {}
@@ -62,11 +62,11 @@ impl FakeSelectReq2 {
 }
 //
 //
-impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq2 {
-    fn eval(&self, query: Query<R>) -> EvalResult {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Request<R>, EvalResult> for FakeSelectReq2 {
+    fn eval(&self, query: Request<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq2", "eval");
         let key = "data";
-        match query.content.get(key) {
+        match query.query.get(key) {
             Some(val) => {
                 match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
@@ -78,7 +78,7 @@ impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Quer
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.query))),
         }
     }
     fn exit(&self) {}
@@ -104,11 +104,11 @@ impl FakeSelectReq3 {
 }
 //
 //
-impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Query<R>, EvalResult> for FakeSelectReq3 {
-    fn eval(&self, query: Query<R>) -> EvalResult {
+impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Request<R>, EvalResult> for FakeSelectReq3 {
+    fn eval(&self, query: Request<R>) -> EvalResult {
         let error = Error::new("FakeSelectReq3", "eval");
         let key = "data";
-        match query.content.get(key) {
+        match query.query.get(key) {
             Some(val) => {
                 match serde_json::from_value(val.to_owned()) {
                     Ok(data) => {
@@ -120,7 +120,7 @@ impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<Quer
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
+            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.query))),
         }
     }
     fn exit(&self) {}

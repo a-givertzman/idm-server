@@ -3,12 +3,11 @@
 mod select_req {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
-    use sal_sync::services::entity::Cot;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::EvalEx, server::{Query, SelectReq}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
+    use crate::{domain::EvalEx, server::{Cot, Request, SelectReq}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -67,21 +66,21 @@ mod select_req {
             ),
         ];
         let select_req = SelectReq::new(vec![
-            (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
+            (Query::Req1, Box::new(FakeSelectReq1::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
                 let reply = json!({"data": request.replace("Request1", "Reply1")});
                 Ok(Some(reply))
             }))),
-            (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
+            (Query::Req2, Box::new(FakeSelectReq2::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
                 let reply = json!({"data": request.replace("Request2", "Reply2")});
                 Ok(Some(reply))
             }))),
-            (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
+            (Query::Req3, Box::new(FakeSelectReq3::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectReq2", "").err(request));
                 }
@@ -90,7 +89,7 @@ mod select_req {
             }))),
         ]);
         for (step, req, target) in test_data {
-            let val: Query<Request> = serde_json::from_value(req).unwrap();
+            let val: Request<Query> = serde_json::from_value(req).unwrap();
             let result = select_req.eval((val, None));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
@@ -108,7 +107,7 @@ mod select_req {
     ///
     /// Fake List of API requiests
     #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    enum Request {
+    enum Query {
         Req1,
         Req2,
         Req3,

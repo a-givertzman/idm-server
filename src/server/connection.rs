@@ -1,10 +1,11 @@
 use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
+use sal_sync::{services::RECV_TIMEOUT, sync::{Handles, Owner, channel}, thread_pool::Scheduler};
 use crate::{
-    domain::{EvalEx, Hub, JsonVal, Link}, server::{ConnectionConf, Cot, EvalResult, Field, FieldConf, FieldId, FieldTerminator, FindField, FixedField, Message, MessageKind, Query, ReplyError, Request, SizedField}
+    domain::{EvalEx, Hub, Link},
+    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, Query, QueryId, Reply, Request, SizedField, Terminator},
 };
-use super::{Event, Reply};
+use super::{Event, Response};
 
 ///
 /// The [Connection] of the `Server`
@@ -13,14 +14,15 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn EvalEx<(Query<Request>, Option<Link>), EvalResult> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
-    hub_exit: Arc<AtomicBool>,
 }
 //
 // 
 impl Connection {
+    /// Configuration for the 
+    const BINCODE_CONFIG: bincode::config::Configuration = bincode::config::standard();
     ///
     /// Returns [Connection] new instance
     pub fn new(
@@ -28,7 +30,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl EvalEx<(Query<Request>, Option<Link>), EvalResult> + Send + 'static,
+        ctx: impl EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> + Send + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -38,13 +40,12 @@ impl Connection {
             ctx: Owner::new(Box::new(ctx)),
             handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
-            hub_exit: Arc::new(AtomicBool::new(false)),
             dbg,
         }
     }
     ///
     /// Setups TCP Message
-    fn tcp_message(dbg: &Dbg) -> Message<(((((((), ()), ()), FieldId), MessageKind), Cot), u32), Vec<u8>> {
+    fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), QueryId), u32), Vec<u8>> {
         const SYN: u8 = 0x22;
         Message::new(
             dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
@@ -53,6 +54,7 @@ impl Connection {
                 FieldConf::U32Be,               // ID
                 FieldConf::Byte,                // Kind
                 FieldConf::Byte,                // Cot
+                FieldConf::U32Be,               // Name
                 FieldConf::U32Be,               // Size
                 FieldConf::Bytes,               // Payload bytes
             ],
@@ -71,49 +73,58 @@ impl Connection {
                             Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with(format!("Can't parse 'Size' u32 filed from bytes {:?}", bytes), format!("{err}"))),
                         }
                     },
-                    FixedField::new(        // Cot | u8
+                    FixedField::new(        // Query | u32
                         dbg,
-                        1,
+                        4,
                         |dbg, bytes| {
-                            match Cot::from_bytes(bytes) {
-                                Ok(cot) => Ok(cot),
-                                Err(err) => Err(Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", format!("{err}"))),
+                            match QueryId::from_be_bytes(bytes) {
+                                Ok(query) => Ok(query),
+                                Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with(format!("Can't parse 'Query' u32 filed"), err)),
                             }
                         },
-                        FixedField::new(        // Kind | u8
+                        FixedField::new(        // Cot | u8
                             dbg,
                             1,
                             |dbg, bytes| {
-                                match MessageKind::try_from(bytes) {
-                                    Ok(kind) => Ok(kind),
-                                    Err(err) => Err(Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", format!("{err}"))),
+                                match Cot::from_be_bytes(bytes) {
+                                    Ok(cot) => Ok(cot),
+                                    Err(err) => Err(Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", err)),
                                 }
                             },
-                            FixedField::new(        // ID | u32
+                            FixedField::new(        // Kind | u8
                                 dbg,
-                                4,
+                                1,
                                 |dbg, bytes| {
-                                    match FieldId::from_bytes(bytes) {
-                                        Ok(id) => Ok(id),
-                                        Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'ID' u32 filed", format!("{err}"))),
+                                    match Content::try_from(bytes) {
+                                        Ok(kind) => Ok(kind),
+                                        Err(err) => Err(Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", err)),
                                     }
                                 },
-                                FindField::new(        // SYN | u8
+                                FixedField::new(        // ID | u32
                                     dbg,
-                                    1,
-                                    |_, bytes| {
-                                        match bytes {
-                                            [SYN] | [SYN, ..] => Ok(Some(())),
-                                            [_] | [_, ..] => Ok(None),
-                                            [] => Ok(None)
+                                    4,
+                                    |dbg, bytes| {
+                                        match FieldId::from_be_bytes(bytes) {
+                                            Ok(id) => Ok(id),
+                                            Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'ID' u32 filed", err)),
                                         }
                                     },
-                                    FieldTerminator::new(),
+                                    FindField::new(        // SYN | u8
+                                        dbg,
+                                        1,
+                                        |_, bytes| {
+                                            match bytes {
+                                                [SYN] | [SYN, ..] => Ok(Some(())),
+                                                _ => Ok(None)
+                                            }
+                                        },
+                                        Terminator::new(),
+                                    ),
                                 ),
                             ),
                         ),
                     ),
-                ),
+                )
             )
         )
     }
@@ -134,11 +145,11 @@ impl Connection {
         let dbg = self.dbg.clone();
         let error = Error::new(&self.dbg, "run");
         let conf = self.conf.clone();
-        let stream = self.stream.take().ok_or(error.err(format!("Can't take stream")))?;
+        let stream = self.stream.take().ok_or(error.err("Can't take stream"))?;
         self.set_tcp_timeout(&stream, conf.timeout);
-        let ctx = self.ctx.take().ok_or(error.err(format!("Can't take ctx")))?;
-        let hub = Arc::new(Hub::new(&dbg, Some(self.hub_exit.clone())));
-        self.send(&stream, hub.clone())?;
+        let ctx = self.ctx.take().ok_or(error.err("Can't take ctx"))?;
+        let (link, recv) = channel::unbounded();
+        self.send(&stream, recv)?;
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let error = Error::new(&dbg, "run");
@@ -150,79 +161,30 @@ impl Connection {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
-                            Ok((((((_, FieldId(msg_id)), kind), cot), _), bytes)) => {
+                            Ok(((((((_, FieldId(event_id)), kind), cot), query_id), _), bytes)) => {
                                 match kind {
-                                    MessageKind::Bytes => {
-                                        match serde_json::from_slice(&bytes) {
-                                            Ok(request) => {
-                                                let query = Query {
-                                                    msg_id,
-                                                    name: (),
-                                                    cot: cot,
-                                                    content: request,
-                                                };
-                                                let reply = match ctx.eval((query, Some(hub.link()))) {
-                                                    Ok(reply) => reply.map(|reply| Reply {
-                                                        data: reply,
-                                                        error: None,
-                                                    }),
-                                                    Err(err) => Some(Reply {
-                                                        data: JsonVal::Null,
-                                                        error: Some(ReplyError::new(
-                                                            error.pass(err).to_string()
-                                                        )),
-                                                    }),
-                                                };
-                                                if let Some(reply) = reply {
-                                                    match serde_json::to_vec(&reply) {
-                                                        Ok(bytes) => {
-                                                            if let Err(err) = link.send(Event::new(msg_id, bytes)) {
-                                                                log::warn!("{dbg}.run | Send reply error: {:?}", err);
-                                                            }
-                                                        }
-                                                        Err(err) => {
-                                                            log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            Err(err) => {
-                                                match std::str::from_utf8(&bytes) {
-                                                    Ok(req) => log::warn!("{}", error.pass_with(format!("Request can't be parsed from {:#?}", req), err.to_string())),
-                                                    Err(err) => log::warn!("{}",
-                                                        error.pass_with(
-                                                            format!("Request can't be parsed from bytes into string, bytes:\n\t{:?}", bytes),
-                                                            err.to_string(),
-                                                        ),
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    MessageKind::Json => {
+                                    Content::Json => {
                                         match serde_json::from_slice(&bytes) {
                                             Ok(query) => {
-                                                let reply = match ctx.eval((query, Some(hub.link()))) {
-                                                    Ok(reply) => reply.map(|reply| Reply {
-                                                        data: reply,
-                                                        error: None,
-                                                    }),
-                                                    Err(err) => Some(Reply {
-                                                        data: JsonVal::Null,
-                                                        error: Some(ReplyError::new(
-                                                            error.pass(err).to_string()
-                                                        )),
+                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, query), Some(hub.link()))) {
+                                                    Ok(response) => response,
+                                                    Err(err) => Some(Response {
+                                                        event_id,
+                                                        query_id,
+                                                        cot: cot.reply_err(),
+                                                        data: Reply::Empty,
+                                                        error: Some(error.pass(err)),
                                                     }),
                                                 };
-                                                if let Some(reply) = reply {
-                                                    match serde_json::to_vec(&reply) {
+                                                if let Some(response) = response {
+                                                    match serde_json::to_vec(&response.data) {
                                                         Ok(bytes) => {
-                                                            if let Err(err) = link.send(Event::new(msg_id, bytes)) {
-                                                                log::warn!("{dbg}.run | Send reply error: {:?}", err);
+                                                            if let Err(err) = link.send(Event::new(event_id, bytes)) {
+                                                                log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                                             }
                                                         }
                                                         Err(err) => {
-                                                            log::warn!("{dbg}.run | Serialize reply error: {:?}", err);
+                                                            log::warn!("{dbg}.run | Can't serialize reply: {:?}", err);
                                                         }
                                                     }
                                                 }
@@ -255,10 +217,13 @@ impl Connection {
                                 log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                             }
                         }
+                        exit.store(true, Ordering::Release);
+                        ctx.exit();
                         break 'main;
                     }
                 }
-                if exit.load(Ordering::SeqCst) {
+                if exit.load(Ordering::Acquire) {
+                    ctx.exit();
                     break 'main;
                 }
             }
@@ -269,12 +234,12 @@ impl Connection {
     }
     ///
     /// Sends messages to the TCP Socket
-    fn send(&self, stream: &TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
+    fn send(&self, stream: &TcpStream, recv: channel::Receiver<Event>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "send");
         let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
-        let hub_exit = self.hub_exit.clone();
-        let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
+        let exit = self.exit.clone();
+        let handle = self.scheduler.spawn(move || {
             let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             // let bytes = message.build(&event.bytes, event.msg_id);
@@ -284,23 +249,40 @@ impl Connection {
                 // FieldConf::Byte,                // Cot
                 // FieldConf::U32Be,               // Size
                 // FieldConf::Bytes,               // Payload bytes
+            'main: loop {
+                match recv.recv_timeout(RECV_TIMEOUT) {
+                    Ok(event) => {
+                        match event {
+                            Event::Request(request) => {
+                            }
+                            Event::Response(response) => {
+                                match response.
 
-            let bytes = message.build(&[
-                Field::Const,
-                Field::U32(event.msg_id),
-                Field::Byte(MessageKind::Bytes as u8),
-                Field::Byte(Cot::Inf as u8),
-                Field::U32(event.bytes.len() as u32),
-                Field::Bytes(event.bytes),
-            ]);
-            if let Err(err) = w_stream.write_all(&bytes) {
-                log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
-                if let Err(err) = Self::close(&dbg, &stream) {
-                    log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                            }
+                        }
+                        let bytes = message.build(&[
+                            Field::Const,
+                            Field::U32(event.id),
+                            Field::Byte(Content::Bytes as u8),
+                            Field::Byte(Cot::Inf as u8),
+                            Field::U32(event.payload.len() as u32),
+                            Field::Bytes(event.payload),
+                        ]);
+                        if let Err(err) = w_stream.write_all(&bytes) {
+                            log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
+                            if let Err(err) = Self::close(&dbg, &stream) {
+                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
+                            }
+                            exit.store(true, Ordering::Release);
+                        }
+                    }
+                    Err(_) => todo!(),
                 }
-                hub_exit.store(true, Ordering::SeqCst);
+                if exit.load(Ordering::Acquire) {
+                    break 'main;
+                }
             }
-            None
+            Ok(())
         })?;
         self.handles.push(handle);
         Ok(())
@@ -363,6 +345,13 @@ impl Connection {
             .map_err(|err| Error::new(dbg, "close").pass(err.to_string()))
     }
     ///
+    /// Checks if the Service has finished running.
+    /// 
+    /// To force finish the Service call `exit`
+    pub fn is_finished(&self) -> bool {
+        self.handles.is_finished()
+    }
+    ///
     /// Returns when internal thread's will finished
     #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
@@ -371,8 +360,7 @@ impl Connection {
     ///
     /// Sends exit signal to main tread
     pub fn exit(&self) {
-        self.hub_exit.store(true, Ordering::SeqCst);
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
 
     }
 }

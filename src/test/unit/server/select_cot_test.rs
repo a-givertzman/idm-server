@@ -3,12 +3,11 @@
 mod select_cot {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
-    use sal_sync::services::entity::Cot;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct, SelectCot, SelectReq}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Cot, Request, SelectAct, SelectCot, SelectReq}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
@@ -93,21 +92,21 @@ mod select_cot {
         ];
         let select = SelectCot::new(vec![
             (Cot::Act, Box::new(SelectAct::new(vec![
-                (Request::Cmd1, Box::new(FakeSelectAct1::new(|request| {
+                (Query::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct1", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Command1", "CmdReply1")});
                     Ok(reply)
                 }))),
-                (Request::Cmd2, Box::new(FakeSelectAct2::new(|request| {
+                (Query::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Command2", "CmdReply2")});
                     Ok(reply)
                 }))),
-                (Request::Cmd3, Box::new(FakeSelectAct3::new(|request| {
+                (Query::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct3", "").err(request));
                     }
@@ -116,21 +115,21 @@ mod select_cot {
                 }))),
             ]))),
             (Cot::Req, Box::new(SelectReq::new(vec![
-                (Request::Req1, Box::new(FakeSelectReq1::new(|request| {
+                (Query::Req1, Box::new(FakeSelectReq1::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Request1", "Reply1")});
                     Ok(Some(reply))
                 }))),
-                (Request::Req2, Box::new(FakeSelectReq2::new(|request| {
+                (Query::Req2, Box::new(FakeSelectReq2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
                     let reply = json!({"data": request.replace("Request2", "Reply2")});
                     Ok(Some(reply))
                 }))),
-                (Request::Req3, Box::new(FakeSelectReq3::new(|request| {
+                (Query::Req3, Box::new(FakeSelectReq3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
@@ -140,7 +139,7 @@ mod select_cot {
             ]))),
         ]);
         for (step, req_cot, req, target) in test_data {
-            let query: Query<Request> = serde_json::from_value(req).unwrap();
+            let query: Request<Query> = serde_json::from_value(req).unwrap();
             match req_cot {
                 Cot::Act => {
                     let (loc, rem) = Link::split(&dbg);
@@ -180,7 +179,7 @@ mod select_cot {
     ///
     /// Fake List of API requiests
     #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    enum Request {
+    enum Query {
         Req1,
         Req2,
         Req3,

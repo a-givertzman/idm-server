@@ -38,7 +38,7 @@ use sal_core::error::Error;
 /// Internal Kind of Message
 /// - Used for build / parsing
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum MessageKind {
+pub enum Content {
     Any = Self::ANY as isize,
     Bool = Self::BOOL as isize,
     Bytes = Self::BYTES as isize,
@@ -58,7 +58,7 @@ pub enum MessageKind {
 }
 //
 //
-impl MessageKind {
+impl Content {
     const ANY: u8       = 00;
     const BOOL: u8      = 08;
     const BYTES: u8     = 02;
@@ -80,53 +80,53 @@ impl MessageKind {
     // pub fn to_bytes(&self) -> u8 {
     // }
 }
-impl TryFrom<&[u8]> for MessageKind {
+impl TryFrom<&[u8]> for Content {
     type Error = Error;
     ///
     /// Returns [MessageKind] converted from `bytes`
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         match bytes {
-            [Self::ANY] => Ok(MessageKind::Any),
-            [Self::BOOL] => Ok(MessageKind::Bool),
-            [Self::BYTES] => Ok(MessageKind::Bytes),
-            [Self::DURATION] => Ok(MessageKind::Duration),
-            [Self::EMPTY] => Ok(MessageKind::Empty),
-            [Self::FLOAT32] => Ok(MessageKind::F32),
-            [Self::FLOAT64] => Ok(MessageKind::F64),
-            [Self::INT16] => Ok(MessageKind::I16),
-            [Self::INT32] => Ok(MessageKind::I32),
-            [Self::INT64] => Ok(MessageKind::I64),
-            [Self::JSON] => Ok(MessageKind::Json),
-            [Self::STRING] => Ok(MessageKind::String),
-            [Self::TIMESTAMP] => Ok(MessageKind::Timestamp),
-            [Self::UINT16] => Ok(MessageKind::U16),
-            [Self::UINT32] => Ok(MessageKind::U32),
-            [Self::UINT64] => Ok(MessageKind::U64),
+            [Self::ANY] => Ok(Content::Any),
+            [Self::BOOL] => Ok(Content::Bool),
+            [Self::BYTES] => Ok(Content::Bytes),
+            [Self::DURATION] => Ok(Content::Duration),
+            [Self::EMPTY] => Ok(Content::Empty),
+            [Self::FLOAT32] => Ok(Content::F32),
+            [Self::FLOAT64] => Ok(Content::F64),
+            [Self::INT16] => Ok(Content::I16),
+            [Self::INT32] => Ok(Content::I32),
+            [Self::INT64] => Ok(Content::I64),
+            [Self::JSON] => Ok(Content::Json),
+            [Self::STRING] => Ok(Content::String),
+            [Self::TIMESTAMP] => Ok(Content::Timestamp),
+            [Self::UINT16] => Ok(Content::U16),
+            [Self::UINT32] => Ok(Content::U32),
+            [Self::UINT64] => Ok(Content::U64),
             [..] => Err(Error::new("MessageKind", "from_bytes").err(format!("Wrong or Empty input: {:?}", &bytes[..16]))),
         }
     }
 }
-impl Into<u8> for MessageKind {
+impl Into<u8> for Content {
     ///
     /// Returns u8 representation of the [MessageKind]
     fn into(self) -> u8 {
         match self {
-            MessageKind::Any => Self::ANY,
-            MessageKind::Bool => Self::BOOL,
-            MessageKind::Bytes => Self::BYTES,
-            MessageKind::Duration => Self::DURATION,
-            MessageKind::Empty => Self::EMPTY,
-            MessageKind::F32 => Self::FLOAT32,
-            MessageKind::F64 => Self::FLOAT64,
-            MessageKind::I16 => Self::INT16,
-            MessageKind::I32 => Self::INT32,
-            MessageKind::I64 => Self::INT64,
-            MessageKind::Json => Self::JSON,
-            MessageKind::String => Self::STRING,
-            MessageKind::Timestamp => Self::TIMESTAMP,
-            MessageKind::U16 => Self::UINT16,
-            MessageKind::U32 => Self::UINT32,
-            MessageKind::U64 => Self::UINT64,
+            Content::Any => Self::ANY,
+            Content::Bool => Self::BOOL,
+            Content::Bytes => Self::BYTES,
+            Content::Duration => Self::DURATION,
+            Content::Empty => Self::EMPTY,
+            Content::F32 => Self::FLOAT32,
+            Content::F64 => Self::FLOAT64,
+            Content::I16 => Self::INT16,
+            Content::I32 => Self::INT32,
+            Content::I64 => Self::INT64,
+            Content::Json => Self::JSON,
+            Content::String => Self::STRING,
+            Content::Timestamp => Self::TIMESTAMP,
+            Content::U16 => Self::UINT16,
+            Content::U32 => Self::UINT32,
+            Content::U64 => Self::UINT64,
         }
     }
 }

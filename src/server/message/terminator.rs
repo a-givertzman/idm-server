@@ -2,17 +2,19 @@ use sal_core::error::Error;
 use super::{Bytes, MessageParse};
 
 ///
-/// Used terminate the sequence of Message fields,
+/// Used to terminate the sequence of Message fields,
 /// just returns passed bytes without changes
-pub struct FieldTerminator {}
+pub struct Terminator {}
 //
 //
-impl FieldTerminator {
+impl Terminator {
+    ///
+    /// Returns [Terminator] new instance
     pub fn new() -> Self {
         Self {}
     }
 }
-impl<'a> MessageParse<(), (), Bytes> for FieldTerminator {
+impl<'a> MessageParse<(), (), Bytes> for Terminator {
     ///
     /// Resets passed `bytes`
     fn parse(&mut self, bytes: Bytes) -> Result<((), (), Bytes), Error> {

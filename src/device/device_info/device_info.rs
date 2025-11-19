@@ -1,7 +1,6 @@
 use std::{fs::OpenOptions, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use crate::{device::DevId, domain::{Error, EvalEx}, server::EvalResult};
+use crate::{device::DevId, domain::{Error, EvalEx}};
 ///
 /// Reply to `DeviceInfo` request
 /// - Provides basic overview info by device
@@ -82,18 +81,20 @@ impl DeviceInfo {
 }
 //
 //
-impl EvalEx<DevId, EvalResult> for DeviceInfo {
+impl EvalEx<DevId, Result<Self, Error>> for DeviceInfo {
     //
     //
-    fn eval(&self, id: DevId) -> EvalResult {
+    fn eval(&self, id: DevId) -> Result<Self, Error> {
         let error = Error::new("DeviceInfo", "eval");
         let path = self.path.join(format!("{}.json", id.0));
         match Self::read(path) {
-            Ok(value) => Ok(Some(json!(value))),
+            Ok(value) => Ok(value),
             Err(err) => Err(error.pass(err)),
         }
     }
     //
     //
-    fn exit(&self) {}
+    fn exit(&self) {
+        // Halt continuous operations here
+    }
 }

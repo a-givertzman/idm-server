@@ -99,7 +99,7 @@ impl Cot {
     pub fn as_bytes(&self) -> [u8; 1] {
         [*self as u8]
     }
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    pub fn from_be_bytes(bytes: &[u8]) -> Result<Self, Error> {
         match bytes {
             [Self::INF]     => Ok(Self::Inf),
             [Self::ACT]     => Ok(Self::Act),
@@ -109,6 +109,32 @@ impl Cot {
             [Self::REQ_CON] => Ok(Self::ReqCon),
             [Self::REQ_ERR] => Ok(Self::ReqErr),
             _ => Err(Error::new("me", "area").err(format!("Can't parse 'Cot' from bytes: {:?}", &bytes[..16])))
+        }
+    }
+    ///
+    /// Returns `Ok` reply [Cot] to current
+    pub fn reply_ok(&self) -> Self {
+        match self {
+            Cot::Inf => todo!(),
+            Cot::Act => Cot::ActCon,
+            Cot::ActCon => todo!(),
+            Cot::ActErr => todo!(),
+            Cot::Req => Cot::ReqCon,
+            Cot::ReqCon => todo!(),
+            Cot::ReqErr => todo!(),
+        }
+    }
+    ///
+    /// Returns `Err` reply [Cot] to current
+    pub fn reply_err(&self) -> Self {
+        match self {
+            Cot::Inf => todo!(),
+            Cot::Act => Cot::ActErr,
+            Cot::ActCon => todo!(),
+            Cot::ActErr => todo!(),
+            Cot::Req => Cot::ReqErr,
+            Cot::ReqCon => todo!(),
+            Cot::ReqErr => todo!(),
         }
     }
 }

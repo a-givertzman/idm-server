@@ -1,10 +1,8 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::{Duration, Instant}};
-use rand::Rng;
+use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
-use serde::{Deserialize, Serialize};
-use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Query, Request}};
-use super::{DevConf, DevStreamConf};
+use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Query, QueryId, Request}};
+use super::DevStreamConf;
 
 ///
 /// Producess Device's events
@@ -38,15 +36,17 @@ impl DevStream {
     }
     ///
     /// Wait for inner thread being finished
+    #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
         self.handle.wait()
     }
 }
 //
 //
-impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
-    fn eval(&self, (_query, link): (Query<Request>, Option<Link>)) -> EvalResult {
+impl EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> for DevStream {
+    fn eval(&self, (req, link): (Request<QueryId, Query>, Option<Link>)) -> EvalResult {
         let error = Error::new("DevStream", "eval");
+        let event_id = req.event_id;
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(None),
             false => match link {
@@ -75,7 +75,7 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
                                         Ok(bytes) => {
                                             log::trace!("{dbg}.eval | Sending dev.id: {}", dev.id);
                                             // log::warn!("{dbg}.eval | Sending dev: {:?}", String::from_utf8_lossy(&bytes));
-                                            let event = Event::new(dev.id.parse().unwrap(), bytes);
+                                            let event = Event::new(event_id, bytes);
                                             // log::warn!("{dbg}.eval | Sending event: {:?}", event);
                                             if let Err(err) = link.send(event) {
                                                 log::warn!("{dbg}.eval | Send error: {:?}", err);
@@ -85,7 +85,7 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
                                     }
                                 }
                             }
-                            if exit.load(Ordering::SeqCst) {
+                            if exit.load(Ordering::Acquire) {
                                 break 'main;
                             }
                             cycle.wait();
@@ -106,70 +106,9 @@ impl EvalEx<(Query<Request>, Option<Link>), EvalResult> for DevStream {
     //
     //
     fn exit(&self) {
-        self.exit.store(true, Ordering::SeqCst);
+        self.exit.store(true, Ordering::Release);
     }
 }
 //
 //
 unsafe impl Send for DevStream {}
-///
-/// Device stream info
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Device {
-    pub id: String,
-    /// Like On/Off
-    pub state: String,
-    /// Like speed, current, etc...
-    pub value: String,
-    pub conf: DevConf,
-    #[serde(skip)]
-    pub val: f64,
-    #[serde(skip)]
-    interval: Option<Instant>,
-}
-impl Device {
-    ///
-    /// Returns [Device] new instance
-    pub fn new(id: String, state: String, val: f64, conf: DevConf) -> Self {
-        Self {
-            id,
-            state,
-            value: format!("{:.3}", val),
-            conf,
-            val,
-            interval: Some(Instant::now()),
-        }
-    }
-    ///
-    /// Elapsed from las send of [Device] 
-    pub fn elapsed(&self) -> Duration {
-        match self.interval {
-            Some(interval) => interval.elapsed(),
-            None => panic!("Device({}).elapsed | Interval is not initialized", self.id),
-        }
-    }
-}
-//
-//
-impl From<&Device> for Device {
-    ///
-    /// Returns [Device] created from it prevouse state
-    /// using configured `conf.diviation`
-    fn from(dev: &Device) -> Self {
-        let mut rng = rand::rng();
-        let sign = rng.random::<bool>();
-        let deviation = dev.conf.deviation * 0.1 * rng.random::<f64>();
-        let val = match sign {
-            true => dev.val + deviation,
-            false => dev.val - deviation,
-        };
-        Self {
-            id: dev.id.to_owned(),
-            state: dev.state.to_owned(),
-            value: format!("{:.3}", val),
-            conf: dev.conf.to_owned(),
-            val,
-            interval: Some(Instant::now()),
-        }
-    }
-}

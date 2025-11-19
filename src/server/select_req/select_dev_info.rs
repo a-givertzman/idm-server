@@ -1,46 +1,43 @@
-use crate::{device::DevId, domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
+use std::path::{Path, PathBuf};
+use crate::{device::{DevId, DeviceInfo}, domain::{Error, EvalEx}, server::{EvalResult, Query, QueryId, Reply, Request}};
 
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceInfo]
 pub(crate) struct SelectDevInfo {
-    ctx: Box<dyn EvalEx<DevId, EvalResult> + Send>,
+    path: PathBuf,
 }
 //
 //
 impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl EvalEx<DevId, EvalResult> + Send + 'static) -> Self {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self {
-            ctx: Box::new(ctx),
+            path: path.as_ref().to_owned(),
         }
     }
 }
 //
 //
-impl EvalEx<Query<Request>, EvalResult> for SelectDevInfo {
-    fn eval(&self, query: Query<Request>) -> EvalResult {
+impl EvalEx<Request<QueryId, Query>, EvalResult> for SelectDevInfo {
+    //
+    fn eval(&self, req: Request<QueryId, Query>) -> EvalResult {
         let error = Error::new("SelectDevInfo", "eval");
-        let key = "dev-id";
-        match query.content.get(key) {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
-                    Ok(dev_id) => {
-                        match self.ctx.eval(DevId(dev_id)) {
-                            Ok(value) => Ok(value),
-                            Err(err) => Err(error.pass(err)),
-                        }
-                    }
-                    Err(err) => Err(error.pass(err.to_string())),
+        match &req.query {
+            Query::DeviceInfo(query) => {
+                match DeviceInfo::from_path("assets/info/").eval(DevId(query.dev_id.clone())) {
+                    Ok(data) => Ok(Some(req.reply(Reply::DeviceInfo(data)))),
+                    Err(err) => Err(error.pass(err)),
                 }
             }
-            None => Err(error.err(format!("'{key}' field is not found in {:#?}", query.content))),
+            _ => Err(error.err(format!("Query::DeviceInfo expected, but found {:?}", req.query_id))),
         }
     }
+    //
     fn exit(&self) {
-        self.ctx.exit();
+        // Halt continuous operations here
     }
 }
 //

@@ -1,18 +1,19 @@
 //!
 //! # Messages transmitted over socket.
 //! 
-//! - Data can be encoded using varius data `Kind`, `Size` and payload Data
+//! - `Data` can be encoded using varius data `Kind`, `Size` and payload data
 //! 
 //! - Message format
-//!     Field name | Start |  Id   | Kind | Cot  |  Size  | Data |
-//!     ---        |  ---  |  ---  | ---  | ---  |  ---   | ---  |
-//!     Data type  |  u8   | u32   | u8   | u8   | u32    | [u8; Size] |
-//!     Value      |  22   | 111   | 02   | 04   | xxx    | [..., ...]  |
+//!     Field name | Start |  Id   | Kind | Cot  | Name |  Size  | Data       |
+//!     ---        |  ---  |  ---  | ---  | ---  | ---  |  ---   | ---        |
+//!     Data type  |  u8   | u32   | u8   | u8   | u32  | u32    | [u8; Size] |
+//!     Value      |  22   | 111   | 02   | 04   | 12   | xxx    | [..., ...] |
 //!     
 //!     - Start - Each message starts with SYN (22)
 //!     - Id - Message id = 111
 //!     - Kind - The `Kind` of the data stored in the `Data` field is 02 - `Bytes`
 //!     - Cot - Cause of transmission is 03 - `Cot::Act`
+//!     - Name - User name of Message / Event / Request
 //!     - Size - The length of the `Data` field - xxx bytes
 //!     - Data - Data structured depending on it `Kind`
 //! 
@@ -40,14 +41,20 @@ use super::{Field, FieldConf};
 /// 
 pub type Bytes = Vec<u8>;
 ///
-/// Parse Message structure from bytes Interface 
+/// Parse [Message] from structured bytes
 pub trait MessageParse<FieldIn, FieldOut, Out> {
     ///
     /// Extracting some pattern from input `bytes`
     fn parse(&mut self, bytes: Bytes) -> Result<(FieldIn, FieldOut, Bytes), Error>;
 }
 ///
-/// Socket Message
+/// Socket [Message] | Parse / Build structured bytes
+/// 
+/// - Message format
+///     Field name | Start |  Id   | Kind | Cot  | Name |  Size  | Data       |
+///     ---        |  ---  |  ---  | ---  | ---  | ---  |  ---   | ---        |
+///     Data type  |  u8   | u32   | u8   | u8   | u32  | u32    | [u8; Size] |
+///     Value      |  22   | 111   | 02   | 04   | 12   | xxx    | [..., ...] |
 pub struct Message<FieldIn, FieldOut> {
     build: Vec<FieldConf>,
     parse: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,

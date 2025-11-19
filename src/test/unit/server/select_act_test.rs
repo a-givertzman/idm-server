@@ -7,7 +7,7 @@ mod select_act {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Query, SelectAct}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Request, SelectAct}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command};
     ///
     ///
@@ -90,7 +90,7 @@ mod select_act {
             }))),
         ]);
         for (step, req, target) in test_data {
-            let val: Query<Command> = serde_json::from_value(req).unwrap();
+            let val: Request<Command> = serde_json::from_value(req).unwrap();
             // MapCtx {
             //     msg_id: step,
             //     map: json!(req).as_object().unwrap().to_owned(),

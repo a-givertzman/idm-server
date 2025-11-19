@@ -4,11 +4,10 @@ mod select_dev_info {
     use std::{sync::Once, time::Duration};
     use indexmap::IndexMap;
     use sal_core::{dbg::Dbg, error::Error};
-    use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{device::DevId, domain::{EvalEx, JsonVal}, server::{EvalResult, Query, Request, SelectDevInfo}};
+    use crate::{device::DevId, domain::{EvalEx, JsonVal}, server::{Cot, EvalResult, QueryId, Request, SelectDevInfo}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -110,7 +109,7 @@ mod select_dev_info {
             )
         );
         for (step, _, req, target) in test_data {
-            let val = Query::new(step, Request::DeviceInfo, Cot::Req, req.as_object().unwrap().to_owned());
+            let val = Request::new(step, QueryId::DeviceInfo, Cot::Req, req.as_object().unwrap().to_owned());
             //  {
             //     msg_id: step,
             //     map: req.as_object().unwrap().to_owned(),

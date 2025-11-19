@@ -5,7 +5,7 @@ mod message {
     use sal_core::{dbg::Dbg, error::Error};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::server::{Cot, FieldConf, FieldId, FieldTerminator, FindField, FixedField, Message, MessageKind, SizedField};
+    use crate::server::{Cot, FieldConf, FieldId, Terminator, FindField, FixedField, Message, Content, SizedField};
     ///
     ///
     static INIT: Once = Once::new();
@@ -27,7 +27,7 @@ mod message {
         [
             &[22],
             FieldId(id).to_be_bytes().as_slice(),
-            &[MessageKind::String as u8],
+            &[Content::String as u8],
             &[cot as u8],
             size.to_be_bytes().as_slice(),
             data,
@@ -54,7 +54,7 @@ mod message {
                 00, vec![
                     to_bytes("123", 4294967291, Cot::Inf),
                 ],
-                FieldId(4294967291), MessageKind::String, Cot::Inf, FieldSize(3), vec![49, 50, 51],
+                FieldId(4294967291), Content::String, Cot::Inf, FieldSize(3), vec![49, 50, 51],
             ),
             (
                 01, vec![
@@ -62,7 +62,7 @@ mod message {
                     to_bytes("23456", 4294967292, Cot::Inf)[..3].to_vec(),
                     to_bytes("23456", 4294967292, Cot::Inf)[3..].to_vec(),
                 ],
-                FieldId(4294967292), MessageKind::String, Cot::Inf, FieldSize(5), vec![50, 51, 52, 53, 54],
+                FieldId(4294967292), Content::String, Cot::Inf, FieldSize(5), vec![50, 51, 52, 53, 54],
             ),
             (
                 02, vec![
@@ -70,7 +70,7 @@ mod message {
                     [&[003, 004], &to_bytes("23456", 4294967293, Cot::Inf)[..4]].concat(),
                     to_bytes("23456", 4294967293, Cot::Inf)[4..].to_vec(),
                 ],
-                FieldId(4294967293), MessageKind::String, Cot::Inf, FieldSize(5), vec![50, 51, 52, 53, 54],
+                FieldId(4294967293), Content::String, Cot::Inf, FieldSize(5), vec![50, 51, 52, 53, 54],
             ),
             (
                 03, vec![
@@ -80,7 +80,7 @@ mod message {
                     to_bytes("2345678", 4294967294, Cot::Inf)[4..6].to_vec(),
                     to_bytes("2345678", 4294967294, Cot::Inf)[6..].to_vec(),
                 ],
-                FieldId(4294967294), MessageKind::String, Cot::Inf, FieldSize(7), vec![50, 51, 52, 53, 54, 55, 56],
+                FieldId(4294967294), Content::String, Cot::Inf, FieldSize(7), vec![50, 51, 52, 53, 54, 55, 56],
             ),
             (
                 04, vec![
@@ -91,10 +91,10 @@ mod message {
                     to_bytes("234567890", 4294967295, Cot::Inf)[7..16].to_vec(),
                     to_bytes("234567890", 4294967295, Cot::Inf)[16..].to_vec(),
                 ],
-                FieldId(4294967295), MessageKind::String, Cot::Inf, FieldSize(9), vec![50, 51, 52, 53, 54, 55, 56, 57, 48],
+                FieldId(4294967295), Content::String, Cot::Inf, FieldSize(9), vec![50, 51, 52, 53, 54, 55, 56, 57, 48],
             ),
         ];
-        let mut message: Message<(((((((), ()), ()), FieldId), MessageKind), Cot), u32), Vec<u8>> = Message::new(
+        let mut message: Message<(((((((), ()), ()), FieldId), Content), Cot), u32), Vec<u8>> = Message::new(
             &dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
             vec![
                 FieldConf::Const(vec![22]),     // Syn
@@ -123,7 +123,7 @@ mod message {
                         &dbg,
                         1,
                         |dbg, bytes| {
-                            match Cot::from_bytes(bytes) {
+                            match Cot::from_be_bytes(bytes) {
                                 Ok(cot) => Ok(cot),
                                 Err(err) => panic!("{}", Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", format!("{err}"))),
                             }
@@ -132,7 +132,7 @@ mod message {
                             &dbg,
                             1,
                             |dbg, bytes| {
-                                match MessageKind::try_from(bytes) {
+                                match Content::try_from(bytes) {
                                     Ok(kind) => Ok(kind),
                                     Err(err) => panic!("{}", Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", format!("{err}"))),
                                 }
@@ -141,7 +141,7 @@ mod message {
                                 &dbg,
                                 4,
                                 |dbg, bytes| {
-                                    match FieldId::from_bytes(bytes) {
+                                    match FieldId::from_be_bytes(bytes) {
                                         Ok(id) => Ok(id),
                                         Err(err) => panic!("{}", Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'ID' u32 filed", format!("{err}"))),
                                     }
@@ -156,7 +156,7 @@ mod message {
                                             [] => Ok(None)
                                         }
                                     },
-                                    FieldTerminator::new(),
+                                    Terminator::new(),
                                 ),
                             ),
                         ),
@@ -205,7 +205,7 @@ mod message {
         log::debug!("\n{}", dbg);
         let test_duration = TestDuration::new(&dbg, Duration::from_secs(1));
         test_duration.run().unwrap();
-        let field_kind = MessageKind::String;
+        let field_kind = Content::String;
         let test_data = [
             (
                 00, vec![
@@ -284,7 +284,7 @@ mod message {
                 (FieldId(4294967285), field_kind.clone(), Cot::Act, FieldSize(4), "123N".as_bytes().to_vec()),
             ),
         ];
-        let mut message: Message<(((((((), ()), ()), FieldId), MessageKind), Cot), u32), Vec<u8>> = Message::new(
+        let mut message: Message<(((((((), ()), ()), FieldId), Content), Cot), u32), Vec<u8>> = Message::new(
             &dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
             vec![
                 FieldConf::Const(vec![22]),     // Syn
@@ -313,7 +313,7 @@ mod message {
                         &dbg,
                         1,
                         |dbg, bytes| {
-                            match Cot::from_bytes(bytes) {
+                            match Cot::from_be_bytes(bytes) {
                                 Ok(cot) => Ok(cot),
                                 Err(err) => panic!("{}", Error::new(dbg, "Cot::from_bytes").pass_with("Can't parse 'Cot' u8 field", format!("{err}"))),
                             }
@@ -322,7 +322,7 @@ mod message {
                             &dbg,
                             1,
                             |dbg, bytes| {
-                                match MessageKind::try_from(bytes) {
+                                match Content::try_from(bytes) {
                                     Ok(kind) => Ok(kind),
                                     Err(err) => panic!("{}", Error::new(dbg, "Kind::from_bytes").pass_with("Can't parse 'Kind' u8 field", format!("{err}"))),
                                 }
@@ -331,7 +331,7 @@ mod message {
                                 &dbg,
                                 4,
                                 |dbg, bytes| {
-                                    match FieldId::from_bytes(bytes) {
+                                    match FieldId::from_be_bytes(bytes) {
                                         Ok(id) => Ok(id),
                                         Err(err) => panic!("{}", Error::new(dbg, "Id::from_bytes").pass_with("Can't parse 'ID' u32 filed", format!("{err}"))),
                                     }
@@ -346,7 +346,7 @@ mod message {
                                             [] => Ok(None)
                                         }
                                     },
-                                    FieldTerminator::new(),
+                                    Terminator::new(),
                                 ),
                             ),
                         ),

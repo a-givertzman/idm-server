@@ -1,46 +1,44 @@
-use crate::{device::DevId, domain::{Error, EvalEx}, server::{EvalResult, Query, Request}};
+use std::path::{Path, PathBuf};
+use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, QueryId, Reply, Request}};
 
 ///
 /// Extracting incoming messages as [DeviceDocRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceDoc]
 pub struct SelectDevDoc {
-    ctx: Box<dyn EvalEx<DevId, EvalResult> + Send>,
+    path: PathBuf,
 }
 //
 //
 impl SelectDevDoc {
     ///
     /// Returns [SelectDevDoc] new instance
-    pub fn new(
-        ctx: impl EvalEx<DevId, EvalResult> + Send + 'static
-    ) -> Self {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self {
-            ctx: Box::new(ctx),
+            path: path.as_ref().to_owned(),
         }
     }
 }
 //
 //
-impl EvalEx<Query<Request>, EvalResult> for SelectDevDoc {
-    fn eval(&self, query: Query<Request>) -> EvalResult {
+impl EvalEx<Request<QueryId, Query>, EvalResult> for SelectDevDoc {
+    //
+    fn eval(&self, req: Request<QueryId, Query>) -> EvalResult {
         let error = Error::new("SelectDevDoc", "eval");
-        match query.content.get("dev-id") {
-            Some(dev_id) => {
-                match serde_json::from_value(dev_id.to_owned()) {
-                    Ok(dev_id) => {
-                        match self.ctx.eval(DevId(dev_id)) {
-                            Ok(value) => Ok(value),
-                            Err(err) => Err(error.pass(err.to_string())),
-                        }
-                    }
+        match &req.query {
+            Query::DeviceDoc(query) => {
+                match DeviceDoc::from_path("assets/info/").eval(DevId(query.dev_id.clone())) {
+                    Ok(data) => Ok(Some(req.reply(Reply::DeviceDoc(data)))),
                     Err(err) => Err(error.pass(err.to_string())),
                 }
             }
-            None => Err(error.err(format!("data field is not found in {:#?}", query))),
+            _ => Err(error.err(format!("Query::DeviceDoc expected, but found {:?}", req.query_id))),
         }
     }
-    fn exit(&self) {}
+    //
+    fn exit(&self) {
+        // Halt continuous operations here
+    }
 }
 //
 //

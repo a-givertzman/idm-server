@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{device::{DevId, DeviceDoc}, domain::EvalEx, server::DeviceInfoRequest};
+use crate::{device::{DevId, DeviceDoc}, domain::EvalEx, server::DeviceInfoQuery};
 ///
 ///
 static INIT: Once = Once::new();
@@ -84,5 +84,5 @@ fn eval() {
 /// Fake Request
 #[derive(Debug, Serialize, Deserialize)]
 struct FakeRequest {
-    data: DeviceInfoRequest
+    data: DeviceInfoQuery
 }

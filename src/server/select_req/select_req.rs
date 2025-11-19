@@ -1,39 +1,35 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
-use serde::de::DeserializeOwned;
-use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query}};
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Request}};
 
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub struct SelectReq<R> {
-    select: IndexMap<R, Box<dyn EvalEx<Query<R>, EvalResult> + Send>>,
+pub struct SelectReq<K, Q> {
+    select: IndexMap<K, Box<dyn EvalEx<Request<K, Q>, EvalResult> + Send>>,
 }
 //
 //
-impl<R: std::hash::Hash + std::cmp::Eq> SelectReq<R> {
+impl<K: std::hash::Hash + std::cmp::Eq, Q> SelectReq<K, Q> {
     ///
     /// Returns [SelectReq] new instance
-    pub fn new(select: Vec<(R, Box<dyn EvalEx<Query<R>, EvalResult> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(K, Box<dyn EvalEx<Request<K, Q>, EvalResult> + Send + 'static>)>) -> Self {
         Self {
-            select: IndexMap::from_iter(select
-            ),
+            select: IndexMap::from_iter(select),
         }
     }
 }
 //
 //
-impl<R: Borrow<R> + Hash + Eq + DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for SelectReq<R> {
+impl<K: Borrow<K> + Hash + Eq + Debug, Q> EvalEx<(Request<K, Q>, Option<Link>), EvalResult> for SelectReq<K, Q> {
     //
     //
-    fn eval(&self, (query, _): (Query<R>, Option<Link>)) -> EvalResult {
+    fn eval(&self, (req, _): (Request<K, Q>, Option<Link>)) -> EvalResult {
         let error = Error::new("SelectReq", "eval");
-        match self.select.get(&query.name) {
-            Some(eval) => {
-                eval.eval(query)
-            },
-            None => Err(error.err(format!("Request {:?} - is not supported", query.name))),
+        match self.select.get(&req.query_id) {
+            Some(eval) => eval.eval(req),
+            None => Err(error.err(format!("Request {:?} - is not supported", req.query_id))),
         }
     }
     //
@@ -46,4 +42,4 @@ impl<R: Borrow<R> + Hash + Eq + DeserializeOwned + Debug> EvalEx<(Query<R>, Opti
 }
 //
 //
-unsafe impl<R> Send for SelectReq<R> {}
+unsafe impl<K, Q> Send for SelectReq<K, Q> {}

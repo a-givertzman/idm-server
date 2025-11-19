@@ -1,6 +1,8 @@
 #![allow(unused)]
 
 use std::usize;
+
+use crate::server::Bytes;
 ///
 /// Filed configuration for the [Message].build
 /// 
@@ -126,7 +128,7 @@ pub enum Field {
     Bytes(Vec<u8>),
 }
 impl Field {
-    pub fn to_be_bytes(&self) -> Vec<u8> {
+    pub fn to_be_bytes(&self) -> Bytes {
         match self {
             Field::Const => vec![],
             Field::U16(val) => {

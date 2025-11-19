@@ -2,11 +2,11 @@
 
 use std::{collections::HashMap, sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use sal_sync::{services::entity::Cot, thread_pool::ThreadPool};
+use sal_sync::thread_pool::ThreadPool;
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{domain::{EvalEx, Link}, server::{DevStream, DevStreamConf, Device, Event, Query, Request}};
+use crate::{domain::{EvalEx, Link}, server::{Cot, DevStream, DevStreamConf, Device, Event, QueryId, Request}};
 ///
 ///
 static INIT: Once = Once::new();
@@ -53,21 +53,21 @@ fn eval() {
     let conf: DevStreamConf = serde_yaml::from_str(conf).unwrap();
     let dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
     let (loc, rem) = Link::split(&dbg);
-    let val = Query::new(0, Request::DeviceStream, Cot::Act, json!({}).as_object().unwrap().to_owned());
+    let val = Request::new(0, QueryId::DeviceStream, Cot::Act, json!({}).as_object().unwrap().to_owned());
     dev_stream.eval((val, Some(rem))).unwrap();
     let mut results = HashMap::new();
     loop {
         match loc.recv_timeout::<Event>(Duration::from_millis(300)) {
             Ok(event) => match event {
                 Some(event) => {
-                    log::trace!("{dbg} | event.id {}", event.msg_id);
-                    log::trace!("{dbg} | event.bytes {:?}", String::from_utf8_lossy(&event.bytes));
-                    match serde_json::from_slice::<Device>(&event.bytes) {
+                    log::trace!("{dbg} | event.id {}", event.id);
+                    log::trace!("{dbg} | event.bytes {:?}", String::from_utf8_lossy(&event.payload));
+                    match serde_json::from_slice::<Device>(&event.payload) {
                         Ok(dev) => {
                             log::trace!("dev: {}", dev.id);
                             results.insert(dev.id.clone(), dev);
                         }
-                        Err(err) => log::warn!("Parse dev error {:?} from: \n\t{:#?}", err, String::from_utf8_lossy(&event.bytes)),
+                        Err(err) => log::warn!("Parse dev error {:?} from: \n\t{:#?}", err, String::from_utf8_lossy(&event.payload)),
                     }
                 }
                 None => {

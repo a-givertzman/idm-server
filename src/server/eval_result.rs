@@ -1,4 +1,4 @@
 use sal_core::error::Error;
-use crate::domain::JsonVal;
+use crate::server::{QueryId, Reply, Response};
 
-pub type EvalResult = Result<Option<JsonVal>, Error>;
+pub type EvalResult = Result<Option<Response<QueryId, Reply>>, Error>;

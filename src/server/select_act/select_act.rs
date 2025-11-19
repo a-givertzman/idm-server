@@ -1,36 +1,35 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
-use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query}};
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Request}};
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub struct SelectAct<R> {
-    select: IndexMap<R, Box<dyn EvalEx<(Query<R>, Option<Link>), EvalResult> + Send>>,
+pub struct SelectAct<K, Q> {
+    select: IndexMap<K, Box<dyn EvalEx<(Request<K, Q>, Option<Link>), EvalResult> + Send>>,
 }
 //
 //
-impl<R: std::hash::Hash + std::cmp::Eq> SelectAct<R> {
+impl<K: std::hash::Hash + std::cmp::Eq, Q> SelectAct<K, Q> {
     ///
     /// Returns [SelectAct] new instance
-    pub fn new(select: Vec<(R, Box<dyn EvalEx<(Query<R>, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(K, Box<dyn EvalEx<(Request<K, Q>, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
         Self {
-            select: IndexMap::from_iter(select
-            ),
+            select: IndexMap::from_iter(select),
         }
     }
 }
 //
 //
-impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Query<R>, Option<Link>), EvalResult> for SelectAct<R> {
-    fn eval(&self, (query, link): (Query<R>, Option<Link>)) -> EvalResult {
+impl<K: Borrow<K> + Hash + Eq + Debug, Q> EvalEx<(Request<K, Q>, Option<Link>), EvalResult> for SelectAct<K, Q> {
+    fn eval(&self, (req, link): (Request<K, Q>, Option<Link>)) -> EvalResult {
         let error = Error::new("SelectAct", "eval");
-        match self.select.get(&query.name) {
+        match self.select.get(&req.query_id) {
             Some(eval) => {
-                let _ = eval.eval((query, link));
+                let _ = eval.eval((req, link));
                 Ok(None)
             },
-            None => Err(error.err(format!("Request {:?} - is not supported", query.name))),
+            None => Err(error.err(format!("Request {:?} - is not supported", req.query_id))),
         }
     }
     //
@@ -43,4 +42,4 @@ impl<R: Borrow<R> + Hash + Eq + serde::de::DeserializeOwned + Debug> EvalEx<(Que
 }
 //
 //
-unsafe impl<R> Send for SelectAct<R> {}
+unsafe impl<K, R> Send for SelectAct<K, R> {}

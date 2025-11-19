@@ -15,7 +15,7 @@ impl FieldId {
     pub fn len(&self) -> usize {
         size_of::<u32>()
     }
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    pub fn from_be_bytes(bytes: &[u8]) -> Result<Self, Error> {
         match bytes {
             [b0, b1, b2, b3] => Ok(Self(u32::from_be_bytes([*b0, *b1, *b2, *b3]))),
             [b0, b1, b2, b3, ..] => Ok(Self(u32::from_be_bytes([*b0, *b1, *b2, *b3]))),
