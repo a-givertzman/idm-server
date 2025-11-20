@@ -31,6 +31,10 @@ impl Query {
             QueryId::BytesExample => Self::bin_decode(&error, &bytes).map(Query::BytesExample),
             _ => serde_json::from_slice(&bytes).map_err(|err| error.pass(err.to_string())),
         }
+        // match bincode::decode_from_slice(&bytes, BINCODE_CONFIG) {
+        //     Ok((query, _)) => ,
+        //     Err(err) => Err(error.pass(err.to_string())),
+        // }
     }
     ///
     /// 

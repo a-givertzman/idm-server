@@ -1,7 +1,7 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{collections::FxDashMap, sync::Handles, thread_pool::Scheduler};
-use crate::server::{Connection, Cot, ServerConf};
+use crate::server::{Connection, Cot, SelectContent, ServerConf};
 use super::{select_cot::SelectCot, select_req::SelectReq, QueryId, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
 /// The Server
@@ -58,30 +58,32 @@ impl Server {
                                         scheduler.clone(),
                                         //
                                         // Select handler for incomong messages by Cot
-                                        SelectCot::new(
-                                            vec![
-                                                // Handling incomong messages with `Cot::Act` by field `cmd`
-                                                (Cot::Act, Box::new(SelectAct::new(
-                                                    vec![
-                                                        // Handling incomong command `DeviceStream`
-                                                        (QueryId::DeviceStream, Box::new(DevStream::new(
-                                                            &dbg,
-                                                            conf.dev_stream.clone(),
-                                                            scheduler.clone(),
-                                                        ))),
-                                                    ]
-                                                ))),
-                                                // Handling incomong messages with Cot::Req by field `req`
-                                                (Cot::Req, Box::new(SelectReq::new(
-                                                    vec![
-                                                        // Handling incomong request `DeviceInfo`
-                                                        (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
-                                                        // Handling incomong request `DeviceDoc`
-                                                        (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
-                                                    ]
-                                                ))),
-                                            ],
-                                        ),
+                                        SelectContent::new(vec![
+                                            SelectCot::new(
+                                                vec![
+                                                    // Handling incomong messages with `Cot::Act` by field `cmd`
+                                                    (Cot::Act, Box::new(SelectAct::new(
+                                                        vec![
+                                                            // Handling incomong command `DeviceStream`
+                                                            (QueryId::DeviceStream, Box::new(DevStream::new(
+                                                                &dbg,
+                                                                conf.dev_stream.clone(),
+                                                                scheduler.clone(),
+                                                            ))),
+                                                        ]
+                                                    ))),
+                                                    // Handling incomong messages with Cot::Req by field `req`
+                                                    (Cot::Req, Box::new(SelectReq::new(
+                                                        vec![
+                                                            // Handling incomong request `DeviceInfo`
+                                                            (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
+                                                            // Handling incomong request `DeviceDoc`
+                                                            (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
+                                                        ]
+                                                    ))),
+                                                ],
+                                            ),
+                                        ])
                                     );
                                     match conn.run() {
                                         Ok(_) => _ = connections.insert(client, conn),

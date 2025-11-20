@@ -14,7 +14,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Event, Option<Link>), EvalResult> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -28,7 +28,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static,
+        ctx: impl EvalEx<(Event, Option<Link>), EvalResult> + Send + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -164,7 +164,7 @@ impl Connection {
                                     Content::Bytes => {
                                         match Query::from_bytes(query_id, &bytes) {
                                             Ok(query) => {
-                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, query), Some(hub.link()))) {
+                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, content, query), Some(hub.link()))) {
                                                     Ok(response) => response,
                                                     Err(err) => Some(Response {
                                                         event_id,
@@ -197,7 +197,7 @@ impl Connection {
                                     Content::Json => {
                                         match Query::from_bytes(query_id, &bytes) {
                                             Ok(query) => {
-                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, query), Some(hub.link()))) {
+                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, content, query), Some(hub.link()))) {
                                                     Ok(response) => response,
                                                     Err(err) => Some(Response {
                                                         event_id,

@@ -98,3 +98,6 @@ impl Into<u8> for Content {
         self as u8
     }
 }
+pub struct ContentBytes;
+pub struct ContentEmpty;
+pub struct ContentJson;
