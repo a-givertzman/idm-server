@@ -1,9 +1,9 @@
 use std::{io::{BufReader, BufWriter, Read, Write}, net::{Shutdown, TcpStream}, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{services::RECV_TIMEOUT, sync::{Handles, Owner, channel}, thread_pool::Scheduler};
+use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
     domain::{EvalEx, Hub, Link},
-    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, Query, QueryId, Reply, Request, SizedField, Terminator},
+    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, QueryId, Reply, Request, SizedField, Terminator},
 };
 use super::{Event, Response};
 
@@ -14,7 +14,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -30,7 +30,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> + Send + 'static,
+        ctx: impl EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -54,7 +54,7 @@ impl Connection {
                 FieldConf::U32Be,               // ID
                 FieldConf::Byte,                // Kind
                 FieldConf::Byte,                // Cot
-                FieldConf::U32Be,               // Name
+                FieldConf::U32Be,               // QueryId
                 FieldConf::U32Be,               // Size
                 FieldConf::Bytes,               // Payload bytes
             ],
@@ -148,8 +148,8 @@ impl Connection {
         let stream = self.stream.take().ok_or(error.err("Can't take stream"))?;
         self.set_tcp_timeout(&stream, conf.timeout);
         let ctx = self.ctx.take().ok_or(error.err("Can't take ctx"))?;
-        let (link, recv) = channel::unbounded();
-        self.send(&stream, recv)?;
+        let hub = Arc::new(Hub::new(&dbg, Some(self.exit.clone())));
+        self.send(&stream, hub.clone())?;
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             let error = Error::new(&dbg, "run");
@@ -161,8 +161,8 @@ impl Connection {
                 match r_stream.read(&mut buf) {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
-                            Ok(((((((_, FieldId(event_id)), kind), cot), query_id), _), bytes)) => {
-                                match kind {
+                            Ok(((((((_, FieldId(event_id)), content), cot), query_id), _), bytes)) => {
+                                match content {
                                     Content::Json => {
                                         match serde_json::from_slice(&bytes) {
                                             Ok(query) => {
@@ -172,37 +172,31 @@ impl Connection {
                                                         event_id,
                                                         query_id,
                                                         cot: cot.reply_err(),
-                                                        data: Reply::Empty,
-                                                        error: Some(error.pass(err)),
+                                                        reply: Reply::error(error.pass(err).to_string()),
                                                     }),
                                                 };
                                                 if let Some(response) = response {
-                                                    match serde_json::to_vec(&response.data) {
-                                                        Ok(bytes) => {
-                                                            if let Err(err) = link.send(Event::new(event_id, bytes)) {
-                                                                log::warn!("{dbg}.run | Can't send reply: {:?}", err);
-                                                            }
-                                                        }
-                                                        Err(err) => {
-                                                            log::warn!("{dbg}.run | Can't serialize reply: {:?}", err);
-                                                        }
+                                                    if let Err(err) = link.send(Event::auto(&dbg, response)) {
+                                                        log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                                     }
                                                 }
                                             }
                                             Err(err) => {
-                                                match std::str::from_utf8(&bytes) {
-                                                    Ok(req) => log::warn!("{}", error.pass_with(format!("Request can't be parsed from {:#?}", req), err.to_string())),
-                                                    Err(err) => log::warn!("{}",
-                                                        error.pass_with(
-                                                            format!("Request can't be parsed from bytes into string, bytes:\n\t{:?}", bytes),
-                                                            err.to_string(),
-                                                        ),
-                                                    )
+                                                let response = Response {
+                                                    event_id,
+                                                    query_id,
+                                                    cot: cot.reply_err(),
+                                                    reply: Reply::error(
+                                                        error.pass_with(format!("Can't parse json query: {:?}", query_id), err.to_string()).to_string()
+                                                    ),
+                                                };
+                                                if let Err(err) = link.send(Event::auto(&dbg, response)) {
+                                                    log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                                 }
                                             }
                                         }
                                     }
-                                    _ => log::warn!("{dbg}.run | Message of kind '{:?}' - is not supported", kind),
+                                    _ => log::warn!("{dbg}.run | Message of kind '{:?}' - is not supported", content),
                                 }
                             }
                             Err(err) => {
@@ -234,55 +228,39 @@ impl Connection {
     }
     ///
     /// Sends messages to the TCP Socket
-    fn send(&self, stream: &TcpStream, recv: channel::Receiver<Event>) -> Result<(), Error> {
+    fn send(&self, stream: &TcpStream, hub: Arc<Hub>) -> Result<(), Error> {
         let dbg = self.dbg.clone();
         let error = Error::new(&dbg, "send");
         let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
         let exit = self.exit.clone();
-        let handle = self.scheduler.spawn(move || {
+        let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
             let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             // let bytes = message.build(&event.bytes, event.msg_id);
-                // FieldConf::Const(vec![0x22]),   // Syn
-                // FieldConf::Bytes,               // ID
-                // FieldConf::Byte,                // Kind
-                // FieldConf::Byte,                // Cot
-                // FieldConf::U32Be,               // Size
-                // FieldConf::Bytes,               // Payload bytes
-            'main: loop {
-                match recv.recv_timeout(RECV_TIMEOUT) {
-                    Ok(event) => {
-                        match event {
-                            Event::Request(request) => {
-                            }
-                            Event::Response(response) => {
-                                match response.
-
-                            }
-                        }
-                        let bytes = message.build(&[
-                            Field::Const,
-                            Field::U32(event.id),
-                            Field::Byte(Content::Bytes as u8),
-                            Field::Byte(Cot::Inf as u8),
-                            Field::U32(event.payload.len() as u32),
-                            Field::Bytes(event.payload),
-                        ]);
-                        if let Err(err) = w_stream.write_all(&bytes) {
-                            log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
-                            if let Err(err) = Self::close(&dbg, &stream) {
-                                log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
-                            }
-                            exit.store(true, Ordering::Release);
-                        }
-                    }
-                    Err(_) => todo!(),
+            // FieldConf::Const(vec![0x22]),   // Syn
+            // FieldConf::Bytes,               // ID
+            // FieldConf::Byte,                // Content
+            // FieldConf::Byte,                // Cot
+            // FieldConf::U32Be,                // QueryId
+            // FieldConf::U32Be,               // Size
+            // FieldConf::Bytes,               // Payload bytes
+            let bytes = message.build(&[
+                Field::Const,
+                Field::U32(event.event_id),
+                Field::Byte(event.content as u8),
+                Field::Byte(event.cot as u8),
+                Field::U32(event.query_id as u32),
+                Field::U32(event.bytes.len() as u32),
+                Field::Bytes(event.bytes),
+            ]);
+            if let Err(err) = w_stream.write_all(&bytes) {
+                log::warn!("{dbg}.run | TcpStream write error: {:?}", err);
+                if let Err(err) = Self::close(&dbg, &stream) {
+                    log::warn!("{dbg}.run | Close tcp stream error: {:?}", err);
                 }
-                if exit.load(Ordering::Acquire) {
-                    break 'main;
-                }
+                exit.store(true, Ordering::Release);
             }
-            Ok(())
+            None
         })?;
         self.handles.push(handle);
         Ok(())

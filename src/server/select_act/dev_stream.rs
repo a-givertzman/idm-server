@@ -1,7 +1,7 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
-use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Query, QueryId, Request}};
+use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Reply, Request}};
 use super::DevStreamConf;
 
 ///
@@ -43,10 +43,9 @@ impl DevStream {
 }
 //
 //
-impl EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> for DevStream {
-    fn eval(&self, (req, link): (Request<QueryId, Query>, Option<Link>)) -> EvalResult {
+impl EvalEx<(Request, Option<Link>), EvalResult> for DevStream {
+    fn eval(&self, (req, link): (Request, Option<Link>)) -> EvalResult {
         let error = Error::new("DevStream", "eval");
-        let event_id = req.event_id;
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(None),
             false => match link {
@@ -71,17 +70,14 @@ impl EvalEx<(Request<QueryId, Query>, Option<Link>), EvalResult> for DevStream {
                             for dev in &mut devices {
                                 if dev.elapsed() > dev.conf.interval {
                                     *dev = Device::from(dev.clone());
-                                    match serde_json::to_vec(&dev) {
-                                        Ok(bytes) => {
-                                            log::trace!("{dbg}.eval | Sending dev.id: {}", dev.id);
-                                            // log::warn!("{dbg}.eval | Sending dev: {:?}", String::from_utf8_lossy(&bytes));
-                                            let event = Event::new(event_id, bytes);
-                                            // log::warn!("{dbg}.eval | Sending event: {:?}", event);
-                                            if let Err(err) = link.send(event) {
-                                                log::warn!("{dbg}.eval | Send error: {:?}", err);
-                                            }
-                                        },
-                                        Err(err) => log::warn!("{dbg}.eval | Json error: {:?}", err),
+                                    //
+                                    // Prepare event & send Event
+                                    let event = Event::auto(
+                                        &dbg,
+                                        req.reply(Reply::DeviceStream(dev.clone())),
+                                    );
+                                    if let Err(err) = link.send(event) {
+                                        log::warn!("{dbg}.eval | Send error: {:?}", err);
                                     }
                                 }
                             }

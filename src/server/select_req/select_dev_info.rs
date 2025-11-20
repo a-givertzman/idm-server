@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use crate::{device::{DevId, DeviceInfo}, domain::{Error, EvalEx}, server::{EvalResult, Query, QueryId, Reply, Request}};
+use crate::{device::{DevId, DeviceInfo}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request}};
 
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
@@ -21,9 +21,9 @@ impl SelectDevInfo {
 }
 //
 //
-impl EvalEx<Request<QueryId, Query>, EvalResult> for SelectDevInfo {
+impl EvalEx<Request, EvalResult> for SelectDevInfo {
     //
-    fn eval(&self, req: Request<QueryId, Query>) -> EvalResult {
+    fn eval(&self, req: Request) -> EvalResult {
         let error = Error::new("SelectDevInfo", "eval");
         match &req.query {
             Query::DeviceInfo(query) => {

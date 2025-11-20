@@ -1,4 +1,4 @@
 use sal_core::error::Error;
-use crate::server::{QueryId, Reply, Response};
+use crate::server::Response;
 
-pub type EvalResult = Result<Option<Response<QueryId, Reply>>, Error>;
+pub type EvalResult = Result<Option<Response>, Error>;
