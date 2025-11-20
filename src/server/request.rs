@@ -50,3 +50,11 @@ impl Request {
         }
     }
 }
+pub trait Decode {
+    fn decode<T>(&self) -> T;
+}
+impl Decode for Request {
+    fn decode<T>(&self) -> T {
+        todo!()
+    }
+}

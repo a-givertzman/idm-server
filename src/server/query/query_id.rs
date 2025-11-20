@@ -8,6 +8,7 @@ pub enum QueryId {
     DeviceStream = 16,
     DeviceInfo   = 20,
     DeviceDoc    = 24,
+    BytesExample = 28,
 }
 //
 //
@@ -21,6 +22,7 @@ impl QueryId {
                     val if val == Self::DeviceStream as u32 => Ok(Self::DeviceStream),
                     val if val == Self::DeviceInfo as u32   => Ok(Self::DeviceInfo),
                     val if val == Self::DeviceDoc as u32    => Ok(Self::DeviceDoc),
+                    val if val == Self::BytesExample as u32 => Ok(Self::BytesExample),
                     _ => Err(Error::new("Query", "from_be_bytes").err(format!("Can't parse from bytes {:?}", &bytes[..12]))),
                 }
             }
