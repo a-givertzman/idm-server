@@ -2,11 +2,10 @@
 
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use serde::Deserialize;
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{device::{DevId, DeviceDoc}, domain::EvalEx, server::DeviceInfoQuery};
+use crate::{device::{DevId, DeviceDoc}, domain::EvalEx};
 ///
 ///
 static INIT: Once = Once::new();
@@ -79,10 +78,4 @@ fn eval() {
     }
     // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     test_duration.exit();
-}
-///
-/// Fake Request
-#[derive(Debug, Deserialize)]
-struct FakeRequest {
-    data: DeviceInfoQuery
 }

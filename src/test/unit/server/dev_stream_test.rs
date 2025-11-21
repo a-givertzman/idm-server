@@ -59,6 +59,7 @@ fn eval() {
         match loc.recv_timeout::<Event<u8>>(Duration::from_millis(300)) {
             Ok(event) => match event {
                 Some(event) => {
+                    log::debug!("{dbg} | event {:?}", event);
                     log::trace!("{dbg} | event.id {}", event.id);
                     log::trace!("{dbg} | event.bytes {:?}", String::from_utf8_lossy(&event.bytes));
                     match serde_json::from_slice::<Device>(&event.bytes) {
@@ -66,7 +67,7 @@ fn eval() {
                             log::trace!("dev: {}", dev.id);
                             results.insert(dev.id.clone(), dev);
                         }
-                        Err(err) => log::warn!("Parse dev error {:?} from: \n\t{:#?}", err, String::from_utf8_lossy(&event.bytes)),
+                        Err(err) => panic!("Can't parse bytes into Device, error {:?} bytes: \n\t{:#?}", err, String::from_utf8_lossy(&event.bytes)),
                     }
                 }
                 None => {

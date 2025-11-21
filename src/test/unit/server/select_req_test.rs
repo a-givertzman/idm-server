@@ -55,12 +55,12 @@ mod select_req {
             ),
             (
                 05,
-                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request5 05".into()) },
+                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 05".into()) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request6 06".into()) },
+                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 06".into()) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];

@@ -4,7 +4,6 @@ mod select_cot {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
     use serde::{Deserialize, Serialize};
-    use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Query, Reply, Request, SelectAct, SelectCot, SelectReq, extract}};
@@ -38,64 +37,55 @@ mod select_cot {
             (
                 01,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Request1 01"} }),
+                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request1 01".into()) },
                 Ok("Reply1 01"),
             ),
             (
                 02,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Request2 02"} }),
+                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request2 02".into()) },
                 Ok("Reply2 02"),
             ),
             (
                 03,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Request3 03"} }),
+                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request3 03".into()) },
                 Ok("Reply3 03"),
             ),
             (
                 04,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Error 04"} }),
+                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 04".into()) },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Error 05"} }),
+                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 05".into()) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
                 Cot::Req,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Error 06"} }),
+                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 06".into()) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
             (
                 07,
                 Cot::Act,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 07"} }),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString("Command1 07".into()) },
                 Ok("CmdReply1 07"),
             ),
             (
                 08,
                 Cot::Act,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 08"} }),
+                Request { event_id: 0, query_id: Req::Cmd2, cot: Cot::Act, content: Content::Json, query: Query::TestString("Command2 08".into()) },
                 Ok("CmdReply2 08"),
             ),
             (
                 09,
                 Cot::Act,
-                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                // json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 09"} }),
+                Request { event_id: 0, query_id: Req::Cmd3, cot: Cot::Act, content: Content::Json, query: Query::TestString("Command3 09".into()) },
                 Ok("CmdReply3 09"),
             ),
         ];

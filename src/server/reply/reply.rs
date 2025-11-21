@@ -4,6 +4,7 @@ use crate::{device::{Device, DeviceDoc, DeviceInfo}, server::Bytes};
 ///
 /// Wrapper for all variants of API [Reply]'s
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Reply {
     /// Use if nothing to be sent in the data fiekld of the `Message`
     Empty,
