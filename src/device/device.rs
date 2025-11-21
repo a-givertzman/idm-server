@@ -5,7 +5,7 @@ use crate::device::DevConf;
 
 ///
 /// Device stream info
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Device {
     pub id: String,
     /// Like On/Off

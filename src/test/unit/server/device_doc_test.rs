@@ -2,7 +2,7 @@
 
 use std::{sync::Once, time::Duration};
 use sal_core::dbg::Dbg;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
@@ -73,8 +73,8 @@ fn eval() {
     ];
     let dev_doc = DeviceDoc::from_path(path);
     for (step, id, target) in test_data {
-        let target = json!({"doc": target});
-        let result = dev_doc.eval(DevId(id)).unwrap().unwrap();
+        let target = serde_json::from_value(json!({"doc": target})).unwrap();
+        let result = dev_doc.eval(DevId(id)).unwrap();
         assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
     }
     // assert!(result == target, "step {} \nresult: {:?}\ntarget: {:?}", step, result, target);
@@ -82,7 +82,7 @@ fn eval() {
 }
 ///
 /// Fake Request
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct FakeRequest {
     data: DeviceInfoQuery
 }

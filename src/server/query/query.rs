@@ -11,6 +11,9 @@ pub enum Query {
     DeviceInfo(DeviceInfoQuery),
     DeviceDoc(DeviceDocQuery),
     BytesExample(BytesExampleQuery),
+    ///
+    /// Used for testing only
+    TestString(String),
 }
 //
 //

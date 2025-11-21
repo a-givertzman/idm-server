@@ -1,11 +1,13 @@
+use std::fmt::Debug;
+
 use sal_core::error::Error;
-use crate::server::{Content, Cot, Event, Query, QueryId, Reply, Response};
+use crate::server::{Content, Cot, Event, Query, Reply, Response};
 
 ///
 /// The [Request] contains information about the Event and `Query`
 /// - `T` - Defines content for later conversion `Message` payload bytes into specific type
 #[derive(Debug, Clone)]
-pub struct Request {
+pub struct Request<QueryId> {
     /// Event id, used internal only to identify incoming request message
     pub event_id: u32,
     /// Name of the [Query], correspond with `query` variant
@@ -19,7 +21,7 @@ pub struct Request {
 }
 //
 //
-impl Request {
+impl<QueryId: Debug + Copy> Request<QueryId> {
     ///
     /// Returns [Query] new instance
     /// - `id` - Query id, used internal only to identify incoming request message
@@ -36,7 +38,7 @@ impl Request {
     }
     ///
     /// Returns Ok [Reply] to current [Request]
-    pub fn reply(&self, reply: Reply) -> Response {
+    pub fn reply(&self, reply: Reply) -> Response<QueryId> {
         Response {
             event_id: self.event_id,
             query_id: self.query_id,
@@ -46,7 +48,7 @@ impl Request {
     }
     ///
     /// Returns Error [Reply] to current [Request]
-    pub fn reply_err(&self, err: impl Into<String>) -> Response {
+    pub fn reply_err(&self, err: impl Into<String>) -> Response<QueryId> {
         Response {
             event_id: self.event_id,
             query_id: self.query_id,
@@ -56,7 +58,7 @@ impl Request {
     }
     ///
     /// Returns [Request] built from `Event`
-    pub fn from_event(event: Event) -> Result<Request, Error> {
+    pub fn from_event(event: Event<QueryId>) -> Result<Request<QueryId>, Error> {
         let query = match event.content {
             Content::Any => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
             Content::Bool => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
@@ -76,8 +78,8 @@ impl Request {
             Content::U64 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
         };
         match query {
-            Ok(query) => Ok(Request {
-                event_id: event.event_id,
+            Ok(query) => Ok(Request::<QueryId> {
+                event_id: event.id,
                 query_id: event.query_id,
                 cot: event.cot,
                 content: event.content,

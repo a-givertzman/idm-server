@@ -26,7 +26,7 @@ mod message {
         let size = data.len() as u32;
         [
             &[22],
-            FieldId(id).to_be_bytes().as_slice(),
+            id.to_be_bytes().as_slice(),
             &[Content::String as u8],
             &[cot as u8],
             size.to_be_bytes().as_slice(),

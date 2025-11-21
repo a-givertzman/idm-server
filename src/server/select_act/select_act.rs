@@ -1,19 +1,20 @@
+use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use indexmap::IndexMap;
-use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, QueryId, Request}};
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Request}};
 
 ///
 /// Matching incoming messages by it's Cot::Req name
 /// - Forwarding matched messages to the associated handlers
 /// - Returns bytes and id of messages to be sent over TCP
-pub struct SelectAct {
-    select: IndexMap<QueryId, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
+pub struct SelectAct<K> {
+    select: IndexMap<K, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send>>,
 }
 //
 //
-impl SelectAct {
+impl<K: Hash + Eq> SelectAct<K> {
     ///
     /// Returns [SelectAct] new instance
-    pub fn new(select: Vec<(QueryId, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(K, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select),
         }
@@ -21,10 +22,10 @@ impl SelectAct {
 }
 //
 //
-impl EvalEx<(Request, Option<Link>), EvalResult> for SelectAct {
+impl<K: Borrow<K> + Hash + Eq + Debug> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectAct<K> {
     //
     //
-    fn eval(&self, (req, link): (Request, Option<Link>)) -> EvalResult {
+    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("SelectAct", "eval");
         match self.select.get(&req.query_id) {
             Some(eval) => {
@@ -44,4 +45,4 @@ impl EvalEx<(Request, Option<Link>), EvalResult> for SelectAct {
 }
 //
 //
-unsafe impl Send for SelectAct {}
+unsafe impl<Q> Send for SelectAct<Q> {}

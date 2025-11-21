@@ -3,7 +3,7 @@ use crate::{device::{Device, DeviceDoc, DeviceInfo}, server::Bytes};
 
 ///
 /// Wrapper for all variants of API [Reply]'s
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Reply {
     /// Use if nothing to be sent in the data fiekld of the `Message`
     Empty,
@@ -14,6 +14,9 @@ pub enum Reply {
     DeviceStream(Device),
     DeviceInfo(DeviceInfo),
     DeviceDoc(DeviceDoc),
+    ///
+    /// Used for testing only
+    TestString(String),
 }
 //
 //

@@ -1,9 +1,9 @@
-use crate::server::{Cot, QueryId, Reply};
+use crate::server::{Cot, Reply};
 
 ///
 /// The [Response] contains information about the `Request` and `Rply` data
-#[derive(Debug, Clone)]
-pub struct Response {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Response<QueryId> {
     /// Event id, used internal only to identify incoming request message
     pub event_id: u32,
     /// Name of the [Query], correspond with `query` variant

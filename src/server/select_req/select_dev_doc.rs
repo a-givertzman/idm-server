@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::{fmt::Debug, path::{Path, PathBuf}};
 use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request, extract}};
 
 ///
@@ -21,9 +21,9 @@ impl SelectDevDoc {
 }
 //
 //
-impl EvalEx<Request, EvalResult> for SelectDevDoc {
+impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for SelectDevDoc {
     //
-    fn eval(&self, req: Request) -> EvalResult {
+    fn eval(&self, req: Request<K>) -> EvalResult<K> {
         let error = Error::new("SelectDevDoc", "eval");
         let query = extract!(&req.query, Query::DeviceInfo)
             .map_err(|_| error.err(format!("Query::DeviceDoc expected, but found {:?}", req.query_id)))?;

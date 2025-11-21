@@ -1,4 +1,4 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
 use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Reply, Request}};
@@ -43,8 +43,8 @@ impl DevStream {
 }
 //
 //
-impl EvalEx<(Request, Option<Link>), EvalResult> for DevStream {
-    fn eval(&self, (req, link): (Request, Option<Link>)) -> EvalResult {
+impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for DevStream {
+    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(None),

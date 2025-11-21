@@ -1,13 +1,14 @@
+use std::fmt::Debug;
 use sal_core::{dbg::Dbg, error::Error};
 use serde::Serialize;
-use crate::server::{Bytes, Content, Cot, QueryId, Reply, Request, Response};
+use crate::server::{Bytes, Content, Cot, Reply, Response};
 
 ///
 /// The [Event] contains the name and data bytes to be sent over the socket
 #[derive(Debug, Clone, bincode::Encode, bincode::Decode)]
-pub struct Event {
+pub struct Event<QueryId> {
     /// Event id, used internal only to identify incoming request message
-    pub event_id: u32,
+    pub id: u32,
     /// Name of the [Query], correspond with `query` variant
     pub query_id: QueryId,
     /// Cause of the transmission
@@ -19,7 +20,7 @@ pub struct Event {
 }
 //
 //
-impl Event {
+impl<QueryId: Debug + Copy> Event<QueryId> {
     ///
     /// ## Returns [Event] new instance
     /// - `event_id` - Idendifier of the received message, take it from the `Request`
@@ -33,9 +34,9 @@ impl Event {
     ///     - `ReqCon` - Rquest | Confirmatiom reply 
     ///     - `ReqErr` - Rquest | Error reply
     /// - `bytes` - raw bytes to be sent over the socket
-    pub fn new(event_id: u32, query_id: QueryId, cot: Cot, content: Content, bytes: Bytes) -> Self {
+    pub fn new(id: u32, query_id: QueryId, cot: Cot, content: Content, bytes: Bytes) -> Self {
         Self {
-            event_id,
+            id,
             query_id,
             cot,
             content, 
@@ -53,10 +54,10 @@ impl Event {
     /// 
     /// - `dbg` - Parent dbg
     /// - `response` - Prepared [Response] contains `event_id`, `query_id`, `cot` and serializable `Reply` 
-    pub fn from(dbg: &Dbg, response: Response) -> Self {
+    pub fn from(dbg: &Dbg, response: Response<QueryId>) -> Self {
         match &response.reply {
             Reply::Empty => Self {
-                event_id: response.event_id,
+                id: response.event_id,
                 query_id: response.query_id,
                 cot: response.cot,
                 content: Content::Empty,
@@ -64,7 +65,7 @@ impl Event {
             },
             Reply::Error(err) => Self::json(dbg, response.event_id, response.query_id, response.cot, err),
             Reply::Bytes(_) => Self {
-                event_id: response.event_id,
+                id: response.event_id,
                 query_id: response.query_id,
                 cot: response.cot,
                 content: Content::Bytes,
@@ -81,14 +82,14 @@ impl Event {
     fn json(dbg: &Dbg, event_id: u32, query_id: QueryId, cot: Cot, reply: impl Serialize) -> Self {
         match serde_json::to_vec(&reply) {
             Ok(bytes) => Self {
-                event_id: event_id,
+                id: event_id,
                 query_id: query_id,
                 cot: cot,
                 content: Content::Json,
                 bytes,
             },
             Err(err) => Self {
-                event_id: event_id,
+                id: event_id,
                 query_id: query_id,
                 cot: Self::error_cot(cot),
                 content: Content::Json,

@@ -1,17 +1,19 @@
+use std::{borrow::Borrow, fmt::Debug, hash::Hash};
+
 use indexmap::IndexMap;
 use crate::{domain::{Error, EvalEx, Link}, server::{Cot, EvalResult, Request}};
 ///
 /// Matching incoming messages by it's Cot
 /// - Forwarding matched messages to the associated handlers
-pub struct SelectCot {
-    select: IndexMap<Cot, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
+pub struct SelectCot<K> {
+    select: IndexMap<Cot, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send>>,
 }
 //
 //
-impl SelectCot {
+impl<K> SelectCot<K> {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(select: Vec<(Cot, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
+    pub fn new(select: Vec<(Cot, Box<dyn EvalEx<(Request<K>, Option<Link>), EvalResult<K>> + Send + 'static>)>) -> Self {
         Self {
             select: IndexMap::from_iter(select),
         }
@@ -19,10 +21,10 @@ impl SelectCot {
 }
 //
 //
-impl EvalEx<(Request, Option<Link>), EvalResult> for SelectCot {
+impl<K: Borrow<K> + Hash + Eq + Debug> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for SelectCot<K> {
     //
     //
-    fn eval(&self, (query, link): (Request, Option<Link>)) -> EvalResult {
+    fn eval(&self, (query, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("SelectCot", "eval");
         match self.select.get(&query.cot) {
             Some(eval) => {

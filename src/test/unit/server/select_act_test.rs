@@ -3,11 +3,10 @@
 mod select_act {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
-    use sal_sync::services::entity::Cot;
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Request, SelectAct}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Query, Request, SelectAct}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command};
     ///
     ///
@@ -37,67 +36,59 @@ mod select_act {
         let test_data = [
             (
                 01,
-                json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 01"} }),
+                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
                 Ok(json!({ "data": "CmdReply1 01" })),
             ),
             (
                 02,
-                json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 02"} }),
+                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command2 02"})).unwrap()) },
                 Ok(json!({ "data": "CmdReply2 02" })),
             ),
             (
                 03,
-                json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 03"} }),
+                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command3 03"})).unwrap()) },
                 Ok(json!({ "data": "CmdReply3 03" })),
             ),
             (
                 04,
-                json!({ "cot": Cot::Req, "name": "Cmd1", "content": {"data": "Error 04"} }),
+                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 04"})).unwrap()) },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                json!({ "cot": Cot::Req, "name": "Cmd2", "content": {"data": "Error 04"} }),
+                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 05"})).unwrap()) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                json!({ "cot": Cot::Req, "name": "Cmd3", "content": {"data": "Error 04"} }),
+                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 06"})).unwrap()) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
         let select_act = SelectAct::new(vec![
-            (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
+            (Command::Cmd2, Box::new(FakeSelectAct1::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectAct1", "").err(request));
                 }
-                let reply = json!({"data": request.replace("Command1", "CmdReply1")});
-                Ok(reply)
+                Ok(request.replace("Command1", "CmdReply1"))
             }))),
             (Command::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectAct2", "").err(request));
                 }
-                let reply = json!({"data": request.replace("Command2", "CmdReply2")});
-                Ok(reply)
+                Ok(request.replace("Command2", "CmdReply2"))
             }))),
             (Command::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectAct3", "").err(request));
                 }
-                let reply = json!({"data": request.replace("Command3", "CmdReply3")});
-                Ok(reply)
+                Ok(request.replace("Command3", "CmdReply3"))
             }))),
         ]);
         for (step, req, target) in test_data {
-            let val: Request<Command> = serde_json::from_value(req).unwrap();
-            // MapCtx {
-            //     msg_id: step,
-            //     map: json!(req).as_object().unwrap().to_owned(),
-            // };
             let (loc, rem) = Link::split(&dbg);
-            let select_result = select_act.eval((val, Some(rem)));
-            let select_target = Ok(None);
+            let select_result = select_act.eval((req, Some(rem)));
+            let select_target: Result<Option<_>, _> = Ok(None);
             assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
             let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
             match (result, target) {

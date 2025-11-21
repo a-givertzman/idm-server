@@ -10,7 +10,6 @@ mod fake_select_req;
 
 mod select_act_test;
 mod select_cot_test;
-mod select_dev_info_test;
 mod select_req_test;
 
 ///

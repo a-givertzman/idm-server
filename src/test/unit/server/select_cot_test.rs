@@ -7,7 +7,7 @@ mod select_cot {
     use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Cot, Request, SelectAct, SelectCot, SelectReq}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Query, Reply, Request, SelectAct, SelectCot, SelectReq, extract}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
@@ -38,112 +38,114 @@ mod select_cot {
             (
                 01,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Request1 01"} }),
-                Ok(json!({ "data": "Reply1 01" })),
+                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Request1 01"} }),
+                Ok("Reply1 01"),
             ),
             (
                 02,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Request2 02"} }),
-                Ok(json!({ "data": "Reply2 02" })),
+                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Request2 02"} }),
+                Ok("Reply2 02"),
             ),
             (
                 03,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Request3 03"} }),
-                Ok(json!({ "data": "Reply3 03" })),
+                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Request3 03"} }),
+                Ok("Reply3 03"),
             ),
             (
                 04,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Error 04"} }),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req1", "content": {"data": "Error 04"} }),
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Error 05"} }),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req2", "content": {"data": "Error 05"} }),
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
                 Cot::Req,
-                json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Error 06"} }),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Req, "name": "Req3", "content": {"data": "Error 06"} }),
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
             (
                 07,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 07"} }),
-                Ok(json!({ "data": "CmdReply1 07" })),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Act, "name": "Cmd1", "content": {"data": "Command1 07"} }),
+                Ok("CmdReply1 07"),
             ),
             (
                 08,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 08"} }),
-                Ok(json!({ "data": "CmdReply2 08" })),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Act, "name": "Cmd2", "content": {"data": "Command2 08"} }),
+                Ok("CmdReply2 08"),
             ),
             (
                 09,
                 Cot::Act,
-                json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 09"} }),
-                Ok(json!({ "data": "CmdReply3 09" })),
+                Request { event_id: 0, query_id: Req::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
+                // json!({ "cot": Cot::Act, "name": "Cmd3", "content": {"data": "Command3 09"} }),
+                Ok("CmdReply3 09"),
             ),
         ];
         let select = SelectCot::new(vec![
             (Cot::Act, Box::new(SelectAct::new(vec![
-                (Query::Cmd1, Box::new(FakeSelectAct1::new(|request| {
+                (Req::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct1", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Command1", "CmdReply1")});
-                    Ok(reply)
+                    Ok(request.replace("Command1", "CmdReply1"))
                 }))),
-                (Query::Cmd2, Box::new(FakeSelectAct2::new(|request| {
+                (Req::Cmd2, Box::new(FakeSelectAct2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct2", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Command2", "CmdReply2")});
-                    Ok(reply)
+                    Ok(request.replace("Command2", "CmdReply2"))
                 }))),
-                (Query::Cmd3, Box::new(FakeSelectAct3::new(|request| {
+                (Req::Cmd3, Box::new(FakeSelectAct3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectAct3", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Command3", "CmdReply3")});
-                    Ok(reply)
+                    Ok(request.replace("Command3", "CmdReply3"))
                 }))),
             ]))),
             (Cot::Req, Box::new(SelectReq::new(vec![
-                (Query::Req1, Box::new(FakeSelectReq1::new(|request| {
+                (Req::Req1, Box::new(FakeSelectReq1::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Request1", "Reply1")});
-                    Ok(Some(reply))
+                    Ok(request.replace("Request1", "Reply1"))
                 }))),
-                (Query::Req2, Box::new(FakeSelectReq2::new(|request| {
+                (Req::Req2, Box::new(FakeSelectReq2::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Request2", "Reply2")});
-                    Ok(Some(reply))
+                    Ok(request.replace("Request2", "Reply2"))
                 }))),
-                (Query::Req3, Box::new(FakeSelectReq3::new(|request| {
+                (Req::Req3, Box::new(FakeSelectReq3::new(|request| {
                     if request.to_lowercase().contains("error") {
                         return Err(Error::new("FakeSelectReq2", "").err(request));
                     }
-                    let reply = json!({"data": request.replace("Request3", "Reply3")});
-                    Ok(Some(reply))
+                    Ok(request.replace("Request3", "Reply3"))
                 }))),
             ]))),
         ]);
         for (step, req_cot, req, target) in test_data {
-            let query: Request<Query> = serde_json::from_value(req).unwrap();
             match req_cot {
                 Cot::Act => {
                     let (loc, rem) = Link::split(&dbg);
-                    let select_result = select.eval((query, Some(rem)));
+                    let select_result = select.eval((req, Some(rem)));
                     let select_target = Ok(None);
                     assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
                     let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
@@ -158,10 +160,10 @@ mod select_cot {
                     }
                 }
                 Cot::Req => {
-                    let result = select.eval((query, None));
+                    let result = select.eval((req, None));
                     match (result, target) {
                         (Ok(result), Ok(target)) => {
-                            let result = result.unwrap();
+                            let result = extract!(result.unwrap().reply, Reply::TestString).unwrap();
                             assert!(result == target, "step {step} \nresult: {:?}\ntarget: {:?}", result, target);
                         }
                         (Ok(result), Err(target)) => panic!("step {} \nresult: {:?}\ntarget: {:?}", step, result, target),
@@ -179,7 +181,7 @@ mod select_cot {
     ///
     /// Fake List of API requiests
     #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Hash)]
-    enum Query {
+    enum Req {
         Req1,
         Req2,
         Req3,

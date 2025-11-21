@@ -14,7 +14,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn EvalEx<(Event, Option<Link>), EvalResult> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -28,7 +28,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl EvalEx<(Event, Option<Link>), EvalResult> + Send + 'static,
+        ctx: impl EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -209,7 +209,7 @@ impl Connection {
         let error = Error::new(&dbg, "send");
         let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
         let exit = self.exit.clone();
-        let handle = hub.listen::<Event, Option<()>>(self.scheduler.clone(), move |event: Event, _| {
+        let handle = hub.listen::<Event<QueryId>, Option<()>>(self.scheduler.clone(), move |event: Event<QueryId>, _| {
             let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             // let bytes = message.build(&event.bytes, event.msg_id);
@@ -222,7 +222,7 @@ impl Connection {
             // FieldConf::Bytes,               // Payload bytes
             let bytes = message.build(&[
                 Field::Const,
-                Field::U32(event.event_id),
+                Field::U32(event.id),
                 Field::Byte(event.content.into()),
                 Field::Byte(event.cot as u8),
                 Field::U32(event.query_id as u32),
