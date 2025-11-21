@@ -1,12 +1,12 @@
 use sal_core::error::Error;
-use serde::{Deserialize, Serialize};
-
-use crate::server::{BINCODE_CONFIG, QueryId};
+use serde::Deserialize;
+use crate::server::BINCODE_CONFIG;
 
 ///
 /// Wrapper for all variants of API [Query]'s
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub enum Query {
+    Empty,
     DeviceStream(DeviceStreamQuery),
     DeviceInfo(DeviceInfoQuery),
     DeviceDoc(DeviceDocQuery),
@@ -25,53 +25,54 @@ impl Query {
     }
     ///
     /// Returns [Query] parsed from raw `bytes` using `bincode::Decode`
-    pub fn from_bytes(query_id: QueryId, bytes: &[u8]) -> Result<Self, Error> {
-        let error = Error::new("Query", "from_json");
-        match query_id {
-            QueryId::BytesExample => Self::bin_decode(&error, &bytes).map(Query::BytesExample),
-            _ => serde_json::from_slice(&bytes).map_err(|err| error.pass(err.to_string())),
-        }
-        // match bincode::decode_from_slice(&bytes, BINCODE_CONFIG) {
-        //     Ok((query, _)) => ,
-        //     Err(err) => Err(error.pass(err.to_string())),
-        // }
-    }
-    ///
-    /// 
-    fn bin_decode<T: bincode::Decode<()>>(error: &Error, bytes: &[u8]) -> Result<T, Error> {
-        bincode::decode_from_slice(bytes, BINCODE_CONFIG).map(|(v, _)| v).map_err(|err| error.pass(err.to_string()))
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        bincode::decode_from_slice(bytes, BINCODE_CONFIG)
+            .map(|(v, _)| v)
+            .map_err(|err| Error::new("Query", "from_bytes").pass(err.to_string()))
     }
 }
 ///
+/// Extract request [Query] variant or returns error
+macro_rules! extract {
+    ($e:expr, $p:path) => {
+        match $e {
+            $p(value) => Ok(value),
+            _ => Err(()),
+        }
+    };
+}
+pub(crate) use extract;
+
+///
 /// Request for `DeviceStream`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub struct DeviceStreamQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
 }
 ///
 /// Request for `DeviceInfo`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub struct DeviceInfoQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
 }
 ///
 /// Request for `DeviceInfo`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub struct DeviceDocQuery {
     #[serde(rename="devId")]
     pub dev_id: String,
 }
 ///
 /// Request example with `Content::Bytes`
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub struct BytesExampleQuery {
     val: f64,
     name: String,
     data: Vec<Pt>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub struct Pt {
     x: f64,
     y: f64,

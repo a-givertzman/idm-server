@@ -72,7 +72,7 @@ impl EvalEx<(Request, Option<Link>), EvalResult> for DevStream {
                                     *dev = Device::from(dev.clone());
                                     //
                                     // Prepare event & send Event
-                                    let event = Event::auto(
+                                    let event = Event::from(
                                         &dbg,
                                         req.reply(Reply::DeviceStream(dev.clone())),
                                     );
@@ -99,8 +99,8 @@ impl EvalEx<(Request, Option<Link>), EvalResult> for DevStream {
             },
         }
     }
-    //
-    //
+    ///
+    /// Halts hanbler
     fn exit(&self) {
         self.exit.store(true, Ordering::Release);
     }

@@ -3,7 +3,7 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
     domain::{EvalEx, Hub, Link},
-    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, Query, QueryId, Reply, Request, SizedField, Terminator},
+    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, QueryId, Reply, SizedField, Terminator},
 };
 use super::{Event, Response};
 
@@ -160,74 +160,19 @@ impl Connection {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
                             Ok(((((((_, FieldId(event_id)), content), cot), query_id), _), bytes)) => {
-                                match content {
-                                    Content::Bytes => {
-                                        match Query::from_bytes(query_id, &bytes) {
-                                            Ok(query) => {
-                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, content, query), Some(hub.link()))) {
-                                                    Ok(response) => response,
-                                                    Err(err) => Some(Response {
-                                                        event_id,
-                                                        query_id,
-                                                        cot: cot.reply_err(),
-                                                        reply: Reply::error(error.pass(err).to_string()),
-                                                    }),
-                                                };
-                                                if let Some(response) = response {
-                                                    if let Err(err) = link.send(Event::auto(&dbg, response)) {
-                                                        log::warn!("{dbg}.run | Can't send reply: {:?}", err);
-                                                    }
-                                                }
-                                            }
-                                            Err(err) => {
-                                                let response = Response {
-                                                    event_id,
-                                                    query_id,
-                                                    cot: cot.reply_err(),
-                                                    reply: Reply::error(
-                                                        error.pass_with(format!("Can't parse `Bytes` query: {:?}", query_id), err.to_string()).to_string()
-                                                    ),
-                                                };
-                                                if let Err(err) = link.send(Event::auto(&dbg, response)) {
-                                                    log::warn!("{dbg}.run | Can't send reply: {:?}", err);
-                                                }
-                                            }
-                                        }
+                                let response = match ctx.eval((Event::new(event_id, query_id, cot, content, bytes), Some(hub.link()))) {
+                                    Ok(response) => response,
+                                    Err(err) => Some(Response {
+                                        event_id,
+                                        query_id,
+                                        cot: cot.reply_err(),
+                                        reply: Reply::error(error.pass(err).to_string()),
+                                    }),
+                                };
+                                if let Some(response) = response {
+                                    if let Err(err) = link.send(Event::from(&dbg, response)) {
+                                        log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                     }
-                                    Content::Json => {
-                                        match Query::from_bytes(query_id, &bytes) {
-                                            Ok(query) => {
-                                                let response = match ctx.eval((Request::new(event_id, query_id, cot, content, query), Some(hub.link()))) {
-                                                    Ok(response) => response,
-                                                    Err(err) => Some(Response {
-                                                        event_id,
-                                                        query_id,
-                                                        cot: cot.reply_err(),
-                                                        reply: Reply::error(error.pass(err).to_string()),
-                                                    }),
-                                                };
-                                                if let Some(response) = response {
-                                                    if let Err(err) = link.send(Event::auto(&dbg, response)) {
-                                                        log::warn!("{dbg}.run | Can't send reply: {:?}", err);
-                                                    }
-                                                }
-                                            }
-                                            Err(err) => {
-                                                let response = Response {
-                                                    event_id,
-                                                    query_id,
-                                                    cot: cot.reply_err(),
-                                                    reply: Reply::error(
-                                                        error.pass_with(format!("Can't parse `Json` query: {:?}", query_id), err.to_string()).to_string()
-                                                    ),
-                                                };
-                                                if let Err(err) = link.send(Event::auto(&dbg, response)) {
-                                                    log::warn!("{dbg}.run | Can't send reply: {:?}", err);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    _ => log::warn!("{dbg}.run | Message of kind '{:?}' - is not supported", content),
                                 }
                             }
                             Err(err) => {
@@ -272,13 +217,13 @@ impl Connection {
             // FieldConf::Bytes,               // ID
             // FieldConf::Byte,                // Content
             // FieldConf::Byte,                // Cot
-            // FieldConf::U32Be,                // QueryId
+            // FieldConf::U32Be,               // QueryId
             // FieldConf::U32Be,               // Size
             // FieldConf::Bytes,               // Payload bytes
             let bytes = message.build(&[
                 Field::Const,
                 Field::U32(event.event_id),
-                Field::Byte(event.content as u8),
+                Field::Byte(event.content.into()),
                 Field::Byte(event.cot as u8),
                 Field::U32(event.query_id as u32),
                 Field::U32(event.bytes.len() as u32),

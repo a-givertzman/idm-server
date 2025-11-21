@@ -3,7 +3,6 @@ use crate::{domain::{Error, EvalEx, Link}, server::{Cot, EvalResult, Request}};
 ///
 /// Matching incoming messages by it's Cot
 /// - Forwarding matched messages to the associated handlers
-/// - Returns bytes and id of messages to be sent over TCP
 pub struct SelectCot {
     select: IndexMap<Cot, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
 }
@@ -36,11 +35,11 @@ impl EvalEx<(Request, Option<Link>), EvalResult> for SelectCot {
             None => Err(error.err(format!("Cot {:?} - is not supported", query.cot))),
         }
     }
-    //
-    //
+    ///
+    /// Halts all configured hanblers
     fn exit(&self) {
-        for (_, e) in &self.select {
-            e.exit();
+        for (_, sel) in &self.select {
+            sel.exit();
         }
     }
 }

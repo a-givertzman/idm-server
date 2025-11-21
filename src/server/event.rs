@@ -43,22 +43,6 @@ impl Event {
         }
     }
     ///
-    /// ## Bytes [Event] built from raw bytes
-    /// 
-    /// **Message will sent with [Content::Bytes]**
-    /// 
-    /// - `req` - original [Request], contains `event_id`, `query_id`, and `cot`
-    /// - `bytes` - raw bytes to be sent over the socket
-    pub fn bytes(req: &Request, bytes: Bytes) -> Self {
-        Self {
-            event_id: req.event_id,
-            query_id: req.query_id,
-            cot: req.cot.reply_ok(),
-            content: Content::Bytes,
-            bytes,
-        }
-    }
-    ///
     /// ## Json [Event] built from object
     /// 
     /// **Message [Content] type will selected automatically depend on the [Reply]**
@@ -69,13 +53,13 @@ impl Event {
     /// 
     /// - `dbg` - Parent dbg
     /// - `response` - Prepared [Response] contains `event_id`, `query_id`, `cot` and serializable `Reply` 
-    pub fn auto(dbg: &Dbg, response: Response) -> Self {
+    pub fn from(dbg: &Dbg, response: Response) -> Self {
         match &response.reply {
             Reply::Empty => Self {
                 event_id: response.event_id,
                 query_id: response.query_id,
                 cot: response.cot,
-                content: Content::Json,
+                content: Content::Empty,
                 bytes: vec![],
             },
             Reply::Error(err) => Self::json(dbg, response.event_id, response.query_id, response.cot, err),

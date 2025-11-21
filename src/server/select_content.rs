@@ -1,46 +1,46 @@
-use indexmap::IndexMap;
-use crate::{domain::{Error, EvalEx, Link}, server::{Cot, EvalResult, Request}};
+use sal_sync::collections::FxIndexMap;
+use crate::{domain::{Error, EvalEx, Link}, server::{Content, EvalResult, Event, Request}};
 ///
-/// Matching incoming messages by it's Cot
-/// - Forwarding matched messages to the associated handlers
-/// - Returns bytes and id of messages to be sent over TCP
+/// Matching incoming [Event]s by it's Content
+/// - Forwarding matched [Event]s to the associated handlers
 pub struct SelectContent {
-    select: IndexMap<Cot, Box<dyn EvalEx<(Request<T>, Option<Link>), EvalResult> + Send>>,
+    select: FxIndexMap<Content, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send>>,
 }
 //
 //
 impl SelectContent {
     ///
-    /// Returns [SortByX] new instance
-    pub fn new(select: Vec<(Cot, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static>)>) -> Self {
+    /// Returns [SelectContent] new instance
+    pub fn new(
+        select: Vec<(Content, Box<dyn EvalEx<(Request, Option<Link>), EvalResult> + Send + 'static>)>,
+    ) -> Self {
         Self {
-            select: IndexMap::from_iter(select),
+            select: FxIndexMap::from_iter(select),
         }
     }
 }
 //
 //
-impl EvalEx<(Request, Option<Link>), EvalResult> for SelectContent {
-    //
-    //
-    fn eval(&self, (query, link): (Request, Option<Link>)) -> EvalResult {
+impl EvalEx<(Event, Option<Link>), EvalResult> for SelectContent {
+    ///
+    /// Selects handler by [Event] content type,
+    /// if handler exists, it evaluates with [Request] built from [Event]
+    fn eval(&self, (event, link): (Event, Option<Link>)) -> EvalResult {
         let error = Error::new("SelectContent", "eval");
-        match self.select.get(&query.cot) {
-            Some(eval) => {
-                match query.cot {
-                    Cot::Act => eval.eval((query, link)),
-                    Cot::Req => eval.eval((query, None)),
-                    _ => Err(error.err(format!("Cot {:?} - is not supported", query.cot))),
-                }
+        match self.select.get(&event.content) {
+            Some(eval) => match Request::from_event(event) {
+                Ok(req) => eval.eval((req, link)),
+                Err(err) => Err(error.pass(err)),
             },
-            None => Err(error.err(format!("Cot {:?} - is not supported", query.cot))),
+            None => Err(error.err(format!("{:?} - is not supported", event.content))),
         }
+        
     }
-    //
-    //
+    ///
+    /// Halts all configured hanblers
     fn exit(&self) {
-        for (_, e) in &self.select {
-            e.exit();
+        for (_, sel) in &self.select {
+            sel.exit();
         }
     }
 }

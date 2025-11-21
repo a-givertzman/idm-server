@@ -51,13 +51,6 @@ pub enum Cot {
 //
 // 
 impl Cot {
-    const INF    : u8 = 0b00000010;
-    const ACT    : u8 = 0b00000100;
-    const ACT_CON: u8 = 0b00001000;
-    const ACT_ERR: u8 = 0b00010000;
-    const REQ    : u8 = 0b00100000;
-    const REQ_CON: u8 = 0b01000000;
-    const REQ_ERR: u8 = 0b10000000;
     ///
     /// Returns true if [self] contains `rhs`
     pub fn contains(&self, rhs: Cot) -> bool {

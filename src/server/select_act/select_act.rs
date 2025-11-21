@@ -34,11 +34,11 @@ impl EvalEx<(Request, Option<Link>), EvalResult> for SelectAct {
             None => Err(error.err(format!("Request {:?} - is not supported", req.query_id))),
         }
     }
-    //
-    //
+    ///
+    /// Halts all configured hanblers
     fn exit(&self) {
-        for (_, e) in &self.select {
-            e.exit();
+        for (_, sel) in &self.select {
+            sel.exit();
         }
     }
 }

@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request}};
+use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request, extract}};
 
 ///
 /// Extracting incoming messages as [DeviceDocRequest]
@@ -25,17 +25,15 @@ impl EvalEx<Request, EvalResult> for SelectDevDoc {
     //
     fn eval(&self, req: Request) -> EvalResult {
         let error = Error::new("SelectDevDoc", "eval");
-        match &req.query {
-            Query::DeviceDoc(query) => {
-                match DeviceDoc::from_path("assets/info/").eval(DevId(query.dev_id.clone())) {
-                    Ok(data) => Ok(Some(req.reply(Reply::DeviceDoc(data)))),
-                    Err(err) => Err(error.pass(err.to_string())),
-                }
-            }
-            _ => Err(error.err(format!("Query::DeviceDoc expected, but found {:?}", req.query_id))),
+        let query = extract!(&req.query, Query::DeviceInfo)
+            .map_err(|_| error.err(format!("Query::DeviceDoc expected, but found {:?}", req.query_id)))?;
+        match DeviceDoc::from_path(&self.path).eval(DevId(query.dev_id.clone())) {
+            Ok(data) => Ok(Some(req.reply(Reply::DeviceDoc(data)))),
+            Err(err) => Err(error.pass(err.to_string())),
         }
     }
-    //
+    ///
+    /// Halts hanbler
     fn exit(&self) {
         // Halt continuous operations here
     }

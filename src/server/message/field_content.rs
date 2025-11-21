@@ -37,7 +37,7 @@ use sal_core::error::Error;
 ///
 /// Internal Kind of Message
 /// - Used for build / parsing
-#[derive(Debug, Clone, Copy, PartialEq, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, bincode::Encode, bincode::Decode)]
 #[repr(u8)]
 pub enum Content {
     Any       = 00,
@@ -98,6 +98,3 @@ impl Into<u8> for Content {
         self as u8
     }
 }
-pub struct ContentBytes;
-pub struct ContentEmpty;
-pub struct ContentJson;

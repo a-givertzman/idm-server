@@ -1,14 +1,11 @@
-use std::marker::PhantomData;
-
 use sal_core::error::Error;
-use serde::de::DeserializeOwned;
-
-use crate::server::{BINCODE_CONFIG, Content, ContentBytes, ContentEmpty, ContentJson, Cot, Query, QueryId, Reply, Response};
+use crate::server::{Content, Cot, Event, Query, QueryId, Reply, Response};
 
 ///
 /// The [Request] contains information about the Event and `Query`
+/// - `T` - Defines content for later conversion `Message` payload bytes into specific type
 #[derive(Debug, Clone)]
-pub struct Request<T> {
+pub struct Request {
     /// Event id, used internal only to identify incoming request message
     pub event_id: u32,
     /// Name of the [Query], correspond with `query` variant
@@ -19,16 +16,15 @@ pub struct Request<T> {
     pub content: Content,
     /// [Query] it self
     pub query: Query,
-    target: PhantomData<T>,
 }
 //
 //
-impl<T> Request<T> {
+impl Request {
     ///
     /// Returns [Query] new instance
     /// - `id` - Query id, used internal only to identify incoming request message
     /// - `name` - Name of the [Query]
-    /// - `bytes` - 
+    /// - `bytes` - Payload bytes to be pased into concrete type
     pub fn new(event_id: u32, query_id: QueryId, cot: Cot, content: Content, query: Query) -> Self {
         Self {
             event_id,
@@ -36,7 +32,6 @@ impl<T> Request<T> {
             cot,
             content,
             query,
-            target: PhantomData,
         }
     }
     ///
@@ -59,37 +54,36 @@ impl<T> Request<T> {
             reply: Reply::error(err),
         }
     }
-}
-///
-/// Converting `Message` payload bytes into the requested type `T`,
-/// which depends on the kind of message `Content`
-pub trait Parse<T> {
-    fn parse(&self, bytes: &[u8]) -> Result<T, Error>;
-}
-//
-//
-impl<T: bincode::Decode<()>> Parse<T> for Request<ContentBytes> {
-    fn parse(&self, bytes: &[u8]) -> Result<T, Error> {
-        match self.content {
-            Content::Bytes => bincode::decode_from_slice(bytes, BINCODE_CONFIG)
-                .map(|(v, _)| v)
-                .map_err(|err| Error::new("Request<ContentBytes>", "parse").pass(err.to_string())),
-            _ => todo!(),
+    ///
+    /// Returns [Request] built from `Event`
+    pub fn from_event(event: Event) -> Result<Request, Error> {
+        let query = match event.content {
+            Content::Any => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::Bool => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::Bytes =>  Query::from_bytes(&event.bytes),
+            Content::Duration => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::Empty => Ok(Query::Empty),
+            Content::F32 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::F64 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::I16 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::I32 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::I64 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::Json => Query::from_bytes(&event.bytes),
+            Content::String => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::Timestamp => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::U16 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::U32 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+            Content::U64 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
+        };
+        match query {
+            Ok(query) => Ok(Request {
+                event_id: event.event_id,
+                query_id: event.query_id,
+                cot: event.cot,
+                content: event.content,
+                query,
+            }),
+            Err(err) => Err(Error::new("Request", "from_event").pass_with(format!("Can't parse request {:?}", event.query_id), err)),
         }
-    }
-}
-//
-//
-impl Parse<()> for Request<ContentEmpty> {
-    fn parse(&self, _: &[u8]) -> Result<(), Error> {
-        Ok(())
-    }
-}
-//
-//
-impl<T: DeserializeOwned> Parse<T> for Request<ContentJson> {
-    fn parse(&self, bytes: &[u8]) -> Result<T, Error> {
-        serde_json::from_slice(&bytes)
-            .map_err(|err| Error::new("Request<ContentJson>", "parse").pass(err.to_string()))
     }
 }
