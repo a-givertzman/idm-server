@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, path::{Path, PathBuf}};
+use std::{fs::OpenOptions, io::Read, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
 use crate::{device::DevId, domain::{Error, EvalEx}};
 ///
@@ -22,19 +22,7 @@ use crate::{device::DevId, domain::{Error, EvalEx}};
 pub struct DeviceDoc {
     #[serde(skip)]
     path: PathBuf,
-    pub id: String,
-    pub manufacturer: String,
-    pub vendor: String,
-    #[serde(rename="order-code")]
-    pub order_code: String,
-    pub model: String,
-    pub serial: String,
-    pub name: String,
-    pub description: String,
-    pub width: String,
-    pub height: String,
-    pub depth: String,
-    pub weight: String,
+    pub doc: String,
 }
 //
 //
@@ -44,18 +32,7 @@ impl DeviceDoc {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
         Self {
             path: path.as_ref().to_owned(),
-            id: Default::default(),
-            manufacturer: Default::default(),
-            vendor: Default::default(),
-            order_code: Default::default(),
-            model: Default::default(),
-            serial: Default::default(),
-            name: Default::default(),
-            description: Default::default(),
-            width: Default::default(),
-            height: Default::default(),
-            depth: Default::default(),
-            weight: Default::default() 
+            doc: Default::default(),
         }
     }
     ///
@@ -64,9 +41,16 @@ impl DeviceDoc {
         let error = Error::new("DeviceDoc", "read");
         let file = OpenOptions::new()
             .read(true)
-            .open(path);
+            .open(path.as_ref());
+        let mut doc = String::new();
         match file {
-            Ok(file) => serde_json::from_reader(file).map_err(|err| error.pass(err.to_string())),
+            Ok(mut file) => {
+                file.read_to_string(&mut doc).map_err(|err| error.pass(err.to_string()))?;
+                Ok(DeviceDoc {
+                    path: Default::default(),
+                    doc,
+                })
+            }
             Err(err) => Err(error.pass(err.to_string())),
         }
     }

@@ -3,7 +3,6 @@
 mod select_act {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
-    use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Query, Request, SelectAct}};
@@ -36,37 +35,37 @@ mod select_act {
         let test_data = [
             (
                 01,
-                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command1 01"})).unwrap()) },
-                Ok(json!({ "data": "CmdReply1 01" })),
+                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command1 01")) },
+                Ok(format!("CmdReply1 01")),
             ),
             (
                 02,
-                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command2 02"})).unwrap()) },
-                Ok(json!({ "data": "CmdReply2 02" })),
+                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command2 02")) },
+                Ok(format!("CmdReply2 02")),
             ),
             (
                 03,
-                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Act, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Command3 03"})).unwrap()) },
-                Ok(json!({ "data": "CmdReply3 03" })),
+                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command3 03")) },
+                Ok(format!("CmdReply3 03")),
             ),
             (
                 04,
-                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 04"})).unwrap()) },
+                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 04")) },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 05"})).unwrap()) },
+                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 05")) },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Req, content: Content::Json, query: Query::TestString(serde_json::to_string(&json!({"data": "Error 06"})).unwrap()) },
+                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 06")) },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
         let select_act = SelectAct::new(vec![
-            (Command::Cmd2, Box::new(FakeSelectAct1::new(|request| {
+            (Command::Cmd1, Box::new(FakeSelectAct1::new(|request| {
                 if request.to_lowercase().contains("error") {
                     return Err(Error::new("FakeSelectAct1", "").err(request));
                 }
