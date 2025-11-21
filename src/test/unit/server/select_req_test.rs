@@ -4,7 +4,6 @@ mod select_req {
     use std::{sync::Once, time::Duration};
     use sal_core::{dbg::Dbg, error::Error};
     use serde::{Deserialize, Serialize};
-    use serde_json::json;
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
     use crate::{domain::EvalEx, server::{Content, Cot, Query, Reply, Request, SelectReq, extract}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};

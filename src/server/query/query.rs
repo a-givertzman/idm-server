@@ -13,6 +13,7 @@ pub enum Query {
     BytesExample(BytesExampleQuery),
     ///
     /// Used for testing only
+    #[allow(unused)]
     TestString(String),
 }
 //
