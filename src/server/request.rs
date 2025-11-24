@@ -70,7 +70,7 @@ impl<QueryId: Debug + Copy> Request<QueryId> {
             Content::I16 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
             Content::I32 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
             Content::I64 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
-            Content::Json => Query::from_bytes(&event.bytes),
+            Content::Json => Query::from_json(&event.bytes),
             Content::String => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
             Content::Timestamp => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),
             Content::U16 => Err(Error::new("Request", "from_event").err(format!("Content {:?} - is not supported", event.content))),

@@ -7,9 +7,13 @@ use crate::server::BINCODE_CONFIG;
 #[derive(Debug, Clone, Deserialize, bincode::Decode)]
 pub enum Query {
     Empty,
+    /// TODO: To be replaced with real Query
     DeviceStream(DeviceStreamQuery),
+    /// TODO: To be replaced with real Query
     DeviceInfo(DeviceInfoQuery),
+    /// TODO: To be replaced with real Query
     DeviceDoc(DeviceDocQuery),
+    /// TODO: To be replaced with real Query
     BytesExample(BytesExampleQuery),
     ///
     /// Used for testing only

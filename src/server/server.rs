@@ -1,6 +1,6 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::{collections::FxDashMap, sync::Handles, thread_pool::Scheduler};
+use sal_sync::{collections::FxDashMap, sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::server::{Connection, Content, Cot, SelectContent, ServerConf};
 use super::{select_cot::SelectCot, select_req::SelectReq, QueryId, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
 ///
@@ -12,7 +12,7 @@ pub struct Server {
     conf: ServerConf,
     scheduler: Scheduler,
     connections: Arc<FxDashMap<String, Connection>>,
-    listener: Arc<FxDashMap<usize, TcpListener>>,
+    listener: Arc<Owner<Arc<TcpListener>>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -27,7 +27,7 @@ impl Server {
             conf,
             scheduler,
             connections: Arc::new(FxDashMap::default()),
-            listener: Arc::new(FxDashMap::default()),
+            listener: Arc::new(Owner::empty()),
             handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,
@@ -46,7 +46,8 @@ impl Server {
             'main: loop {
                 match TcpListener::bind(conf.address.clone()) {
                     Ok(listener) => {
-                        listeners.insert(listeners.len(), listener.try_clone().unwrap());
+                        let listener= Arc::new(listener);
+                        listeners.replace(listener.clone());
                         for stream in listener.incoming() {
                             match stream {
                                 Ok(stream) => {
@@ -122,7 +123,7 @@ impl Server {
                                         }
                                     }
                                 }
-                                Err(err) => log::warn!("{dbg}.run | Get TcpStream error: {:?}", err),
+                                Err(err) => log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err),
                             }
                             if exit.load(Ordering::SeqCst) {
                                 break 'main;
@@ -160,9 +161,9 @@ impl Server {
     #[allow(unused)]
     pub fn exit(&self) {
         self.exit.store(true, Ordering::SeqCst);
-        for listener in self.listener.iter() {
+        if let Some(listener) = self.listener.take() {
             if let Err(err) = listener.set_nonblocking(true) {
-                log::warn!("{}.wait | TcpListener '{}' set_nonblocking error: {:?}", self.dbg, listener.key(), err);
+                log::warn!("{}.wait | TcpListener set_nonblocking error: {:?}", self.dbg, err);
             }
         }
         for conn in self.connections.iter() {
