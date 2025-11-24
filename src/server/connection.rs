@@ -28,14 +28,14 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: impl EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send + 'static,
+        ctx: Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send + 'static>,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
             conf,
             stream: Owner::new(stream),
             scheduler,
-            ctx: Owner::new(Box::new(ctx)),
+            ctx: Owner::new(ctx),
             handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
             dbg,

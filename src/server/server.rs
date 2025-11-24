@@ -1,16 +1,17 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{collections::FxDashMap, sync::{Handles, Owner}, thread_pool::Scheduler};
-use crate::server::{Connection, Content, Cot, SelectContent, ServerConf};
-use super::{select_cot::SelectCot, select_req::SelectReq, QueryId, SelectAct, SelectDevDoc, SelectDevInfo, DevStream};
+use crate::{conf::Conf, domain::{EvalEx, Link}, server::{Connection, EvalResult, Event}};
+use super::QueryId;
 ///
 /// The Server
 /// - Setups socket server at specified address
 /// - Spawnes `Connection` on each incoming requiest
 pub struct Server {
     dbg: Dbg,
-    conf: ServerConf,
+    conf: Conf,
     scheduler: Scheduler,
+    ctx: Arc<Box<dyn Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send > + Send + Sync>>,
     connections: Arc<FxDashMap<String, Connection>>,
     listener: Arc<Owner<Arc<TcpListener>>>,
     handles: Handles<()>,
@@ -21,11 +22,17 @@ pub struct Server {
 impl Server {
     ///
     /// Returns [Server] new instance
-    pub fn new(parent: impl Into<String>, conf: ServerConf, scheduler: Scheduler) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        conf: Conf,
+        scheduler: Scheduler,
+        ctx: impl Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send> + Send + Sync + 'static,
+    ) -> Self {
         let dbg = Dbg::new(parent.into(), "Server");
         Self {
             conf,
             scheduler,
+            ctx: Arc::new(Box::new(ctx)),
             connections: Arc::new(FxDashMap::default()),
             listener: Arc::new(Owner::empty()),
             handles: Handles::new(&dbg),
@@ -39,12 +46,13 @@ impl Server {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let scheduler = self.scheduler.clone();
+        let ctx = self.ctx.clone();
         let connections = self.connections.clone();
         let listeners = self.listener.clone();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             'main: loop {
-                match TcpListener::bind(conf.address.clone()) {
+                match TcpListener::bind(conf.server.address.clone()) {
                     Ok(listener) => {
                         let listener= Arc::new(listener);
                         listeners.replace(listener.clone());
@@ -54,60 +62,10 @@ impl Server {
                                     let client = stream.peer_addr().map(|a| a.to_string()).unwrap_or(connections.len().to_string());
                                     let conn = Connection::new(
                                         &dbg,
-                                        conf.connection.clone(),
+                                        conf.server.connection.clone(),
                                         stream,
                                         scheduler.clone(),
-                                        //
-                                        // Select handler for incomong messages by Content
-                                        SelectContent::new(vec![
-                                            // Handler for Content::Bytes
-                                            (Content::Bytes, Box::new(SelectCot::new(vec![
-                                                // Handling incomong messages with `Cot::Act` by field `cmd`
-                                                (Cot::Act, Box::new(SelectAct::new(vec![
-                                                    // Handling incomong commands
-                                                    // ...
-                                                ]))),
-                                                // Handling incomong messages with Cot::Req by field `req`
-                                                (Cot::Req, Box::new(SelectReq::new(vec![
-                                                    // Handling incomong requests
-                                                    // ...
-                                                ]))),
-                                            ]))),
-                                            // Handler for Content::Empty
-                                            (Content::Empty, Box::new(SelectCot::new(vec![
-                                                // Handling incomong messages with `Cot::Act` by field `cmd`
-                                                (Cot::Act, Box::new(SelectAct::new(vec![
-                                                    // Handling incomong commands
-                                                    // ...
-                                                ]))),
-                                                // Handling incomong messages with Cot::Req by field `req`
-                                                (Cot::Req, Box::new(SelectReq::new(vec![
-                                                    // Handling incomong requests
-                                                    // ...
-                                                ]))),
-                                            ]))),
-                                            // Handler for Content::Json
-                                            (Content::Json, Box::new(SelectCot::new(vec![
-                                                // Handling incomong messages with `Cot::Act` by field `cmd`
-                                                (Cot::Act, Box::new(SelectAct::new(
-                                                    vec![
-                                                        // Handling incomong command `DeviceStream`
-                                                        (QueryId::DeviceStream, Box::new(DevStream::new(
-                                                            &dbg,
-                                                            conf.dev_stream.clone(),
-                                                            scheduler.clone(),
-                                                        ))),
-                                                    ]
-                                                ))),
-                                                // Handling incomong messages with Cot::Req by field `req`
-                                            (Cot::Req, Box::new(SelectReq::new(vec![
-                                                    // Handling incomong request `DeviceInfo`
-                                                    (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
-                                                    // Handling incomong request `DeviceDoc`
-                                                    (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
-                                                ]))),
-                                            ]))),
-                                        ])
+                                        (ctx)(&dbg, &conf),
                                     );
                                     match conn.run() {
                                         Ok(_) => _ = connections.insert(client, conn),
