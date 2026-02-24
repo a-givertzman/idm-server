@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
 use sal_core::dbg::Dbg;
 use sal_sync::{services::ServiceCycle, sync::Handles, thread_pool::Scheduler};
-use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Event, Reply, Request}};
+use crate::{device::Device, domain::{Error, EvalEx, Link}, server::{EvalResult, Frame, Query, Reply}};
 use super::DevStreamConf;
 
 ///
@@ -43,8 +43,8 @@ impl DevStream {
 }
 //
 //
-impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for DevStream {
-    fn eval(&self, (req, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Frame<K>, Option<Link>), EvalResult<K>> for DevStream {
+    fn eval(&self, (frame, link): (Frame<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("DevStream", "eval");
         match self.is_active.load(Ordering::SeqCst) {
             true => Ok(None),
@@ -55,6 +55,21 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                     let exit = self.exit.clone();
                     log::info!("{dbg}.eval | Staring...");
                     let handle = self.scheduler.spawn(move || {
+                        //
+                        // Prepare event & send Event
+                        match frame.operation::<Query>() {
+                            Ok(query) => {
+                                log::debug!("{dbg}.eval | Parsed: {:?}", query);
+                            }
+                            Err(err) => {
+                                let frame = Frame::from(&dbg, frame.reply_err(err.to_string()));
+                                if let Err(err) = link.send(frame) {
+                                    log::warn!("{dbg}.eval | Send error: {:?}", err);
+                                    return Ok(());
+                                }
+                            }
+                        }
+
                         let mut devices: Vec<Device> = conf.devices.iter().map(|(id, conf)| {
                             Device::new(
                                 id.to_owned(),
@@ -65,24 +80,18 @@ impl<K: Debug + Copy + bincode::Encode + Send + 'static> EvalEx<(Request<K>, Opt
                         }).collect();
                         log::debug!("{dbg}.eval | Configured {} devices", devices.len());
                         let mut cycle = ServiceCycle::new(&dbg.to_string(), Duration::from_millis(10));
-                        'main: loop {
+                        'main: while !exit.load(Ordering::Acquire) {
                             cycle.start();
                             for dev in &mut devices {
                                 if dev.elapsed() > dev.conf.interval {
                                     *dev = Device::from(dev.clone());
-                                    //
-                                    // Prepare event & send Event
-                                    let event = Event::from(
-                                        &dbg,
-                                        req.reply(Reply::DeviceStream(dev.clone())),
+                                    let frame = Frame::from(&dbg,
+                                        frame.reply(Reply::DeviceStream(dev.clone())),
                                     );
-                                    if let Err(err) = link.send(event) {
+                                    if let Err(err) = link.send(frame) {
                                         log::warn!("{dbg}.eval | Send error: {:?}", err);
                                     }
                                 }
-                            }
-                            if exit.load(Ordering::Acquire) {
-                                break 'main;
                             }
                             cycle.wait();
                         }

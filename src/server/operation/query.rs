@@ -22,10 +22,14 @@ pub enum Query {
 }
 //
 //
-impl Query {
+impl Parse for Query {
+    //    
+    fn empty() -> Self {
+        Self::Empty
+    }
     ///
     /// Returns [Query] parsed from JSON `bytes`
-    pub fn from_json(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_json(bytes: &[u8]) -> Result<Self, Error> {
         match serde_json::from_slice(&bytes) {
             Ok(query) => Ok(query),
             Err(err) => Err(Error::new("Query", "from_json").pass(err.to_string())),
@@ -33,7 +37,7 @@ impl Query {
     }
     ///
     /// Returns [Query] parsed from raw `bytes` using `bincode::Decode`
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         bincode::decode_from_slice(bytes, BINCODE_CONFIG)
             .map(|(v, _)| v)
             .map_err(|err| Error::new("Query", "from_bytes").pass(err.to_string()))
@@ -84,4 +88,23 @@ pub struct BytesExampleQuery {
 pub struct Pt {
     x: f64,
     y: f64,
+}
+///
+/// Interface to parse Opreation from raw payload
+pub trait Parse: Sized + std::fmt::Debug {
+    ///
+    /// Returns [Operation::Empty]
+    fn empty() -> Self;
+    ///
+    /// Returns [Operation] parsed from JSON `bytes`
+    fn from_json(bytes: &[u8]) -> Result<Self, Error> {
+        _ = bytes;
+        Err(Error::new(format!("{:?}", std::any::type_name::<Self>()), "from_json").err("Doedn't supports parsing from json bytes"))
+    }
+    ///
+    /// Returns [Operation] parsed from raw `bytes` using `bincode::Decode`
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        _ = bytes;
+        Err(Error::new(format!("{:?}", std::any::type_name::<Self>()), "from_bytes").err("Doedn't supports parsing from bytes"))
+    }
 }

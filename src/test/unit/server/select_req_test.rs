@@ -6,7 +6,7 @@ mod select_req {
     use serde::{Deserialize, Serialize};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::EvalEx, server::{Content, Cot, Query, Reply, Request, SelectReq, extract}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
+    use crate::{domain::EvalEx, server::{Content, Cot, Frame, Query, Reply, SelectReq, extract}, test::unit::server::fake_select_req::{FakeSelectReq1, FakeSelectReq2, FakeSelectReq3}};
     ///
     ///
     static INIT: Once = Once::new();
@@ -35,32 +35,32 @@ mod select_req {
         let test_data = [
             (
                 01,
-                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request1 01".into()) },
+                Frame { id: 0, operation_id: Req::Req1, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Request1 01\"}".as_bytes().into() },
                 Ok(format!("Reply1 01")),
             ),
             (
                 02,
-                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request2 02".into()) },
+                Frame { id: 0, operation_id: Req::Req2, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Request2 02\"}".as_bytes().into() },
                 Ok(format!("Reply2 02")),
             ),
             (
                 03,
-                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Request3 03".into()) },
+                Frame { id: 0, operation_id: Req::Req3, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Request3 03\"}".as_bytes().into() },
                 Ok(format!("Reply3 03")),
             ),
             (
                 04,
-                Request { event_id: 0, query_id: Req::Req1, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 04".into()) },
+                Frame { id: 0, operation_id: Req::Req1, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 04\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                Request { event_id: 0, query_id: Req::Req2, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 05".into()) },
+                Frame { id: 0, operation_id: Req::Req2, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 05\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                Request { event_id: 0, query_id: Req::Req3, cot: Cot::Req, content: Content::Json, query: Query::TestString("Error 06".into()) },
+                Frame { id: 0, operation_id: Req::Req3, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 06\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];

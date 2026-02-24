@@ -1,8 +1,8 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{collections::FxDashMap, sync::{Handles, Owner}, thread_pool::Scheduler};
-use crate::{conf::Conf, domain::{EvalEx, Link}, server::{Connection, EvalResult, Event}};
-use super::QueryId;
+use crate::{conf::Conf, domain::{EvalEx, Link}, server::{Connection, EvalResult, Frame}};
+use super::OperationId;
 ///
 /// The Server
 /// - Setups socket server at specified address
@@ -11,7 +11,7 @@ pub struct Server {
     dbg: Dbg,
     conf: Conf,
     scheduler: Scheduler,
-    ctx: Arc<Box<dyn Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send > + Send + Sync>>,
+    ctx: Arc<Box<dyn Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send > + Send + Sync>>,
     connections: Arc<FxDashMap<String, Connection>>,
     listener: Arc<Owner<Arc<TcpListener>>>,
     handles: Handles<()>,
@@ -26,7 +26,7 @@ impl Server {
         parent: impl Into<String>,
         conf: Conf,
         scheduler: Scheduler,
-        ctx: impl Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send> + Send + Sync + 'static,
+        ctx: impl Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send> + Send + Sync + 'static,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Server");
         Self {

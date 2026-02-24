@@ -1,4 +1,6 @@
-use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query, Request, extract}};
+use std::fmt::Debug;
+
+use crate::{domain::{Error, EvalEx, Link}, server::{EvalResult, Query, Frame, extract}};
 
 ///
 /// Fake Req1 handler
@@ -18,15 +20,19 @@ impl FakeSelectAct1 {
 }
 //
 //
-impl<K> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for FakeSelectAct1 {
-    fn eval(&self, (request, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<(Frame<K>, Option<Link>), EvalResult<K>> for FakeSelectAct1 {
+    fn eval(&self, (frame, link): (Frame<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("FakeSelectAct1", "eval");
-        let query = extract!(request.query, Query::TestString).unwrap();
+        log::debug!("FakeSelectAct1.eval | Parsing Cmd...");
+        let query = frame.operation().map_err(|err| error.pass(err)).unwrap();
+        let query = extract!(query, Query::TestString).unwrap();
+        log::debug!("FakeSelectAct1.eval | Preparing Reply...");
         match (self.ctx)(query) {
             Ok(value) => {
                 link.unwrap().send(
                     serde_json::to_string(&value).unwrap(),
                 ).unwrap();
+                log::debug!("FakeSelectAct1.eval | Reply send");
                 Ok(None)
             }
             Err(err) => Err(error.pass(err.to_string())),
@@ -55,15 +61,17 @@ impl FakeSelectAct2 {
 }
 //
 //
-impl<K> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for FakeSelectAct2 {
-    fn eval(&self, (request, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<(Frame<K>, Option<Link>), EvalResult<K>> for FakeSelectAct2 {
+    fn eval(&self, (frame, link): (Frame<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("FakeSelectAct2", "eval");
-        let query = extract!(request.query, Query::TestString).unwrap();
+        let query = frame.operation().map_err(|err| error.pass(err)).unwrap();
+        let query = extract!(query, Query::TestString).unwrap();
         match (self.ctx)(query) {
             Ok(value) => {
                 link.unwrap().send(
                     serde_json::to_string(&value).unwrap(),
                 ).unwrap();
+                log::debug!("FakeSelectAct2.eval | Reply send");
                 Ok(None)
             }
             Err(err) => Err(error.pass(err.to_string())),
@@ -92,15 +100,17 @@ impl FakeSelectAct3 {
 }
 //
 //
-impl<K> EvalEx<(Request<K>, Option<Link>), EvalResult<K>> for FakeSelectAct3 {
-    fn eval(&self, (request, link): (Request<K>, Option<Link>)) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<(Frame<K>, Option<Link>), EvalResult<K>> for FakeSelectAct3 {
+    fn eval(&self, (frame, link): (Frame<K>, Option<Link>)) -> EvalResult<K> {
         let error = Error::new("FakeSelectAct3", "eval");
-        let query = extract!(request.query, Query::TestString).unwrap();
+        let query = frame.operation().map_err(|err| error.pass(err)).unwrap();
+        let query = extract!(query, Query::TestString).unwrap();
         match (self.ctx)(query) {
             Ok(value) => {
                 link.unwrap().send(
                     serde_json::to_string(&value).unwrap(),
                 ).unwrap();
+                log::debug!("FakeSelectAct3.eval | Reply send");
                 Ok(None)
             }
             Err(err) => Err(error.pass(err.to_string())),

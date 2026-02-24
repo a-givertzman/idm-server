@@ -1,5 +1,5 @@
 use std::{fmt::Debug, path::{Path, PathBuf}};
-use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request, extract}};
+use crate::{device::{DevId, DeviceDoc}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Frame, extract}};
 
 ///
 /// Extracting incoming messages as [DeviceDocRequest]
@@ -21,14 +21,15 @@ impl SelectDevDoc {
 }
 //
 //
-impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for SelectDevDoc {
+impl<K: Debug + Copy> EvalEx<Frame<K>, EvalResult<K>> for SelectDevDoc {
     //
-    fn eval(&self, req: Request<K>) -> EvalResult<K> {
+    fn eval(&self, frame: Frame<K>) -> EvalResult<K> {
         let error = Error::new("SelectDevDoc", "eval");
-        let query = extract!(&req.query, Query::DeviceInfo)
-            .map_err(|_| error.err(format!("Query::DeviceDoc expected, but found {:?}", req.query_id)))?;
+        let query = frame.operation().map_err(|err| error.pass(err))?;
+        let query = extract!(&query, Query::DeviceInfo)
+            .map_err(|_| error.err(format!("Query::DeviceDoc expected, but found {:?}", frame.operation_id)))?;
         match DeviceDoc::from_path(&self.path).eval(DevId(query.dev_id.clone())) {
-            Ok(data) => Ok(Some(req.reply(Reply::DeviceDoc(data)))),
+            Ok(data) => Ok(Some(frame.reply(Reply::DeviceDoc(data)))),
             Err(err) => Err(error.pass(err.to_string())),
         }
     }

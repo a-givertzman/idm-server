@@ -5,7 +5,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use testing::stuff::max_test_duration::TestDuration;
 use debugging::session::debug_session::{DebugSession, LogLevel};
-use crate::{device::Device, domain::{EvalEx, Link}, server::{Content, Cot, DevStream, DevStreamConf, EvalResult, Event, Query, QueryId, Request}};
+use crate::{device::Device, domain::{EvalEx, Link}, server::{Content, Cot, DevStream, DevStreamConf, EvalResult, Frame, OperationId}};
 ///
 ///
 static INIT: Once = Once::new();
@@ -52,16 +52,16 @@ fn eval() {
     let conf: DevStreamConf = serde_yaml::from_str(conf).unwrap();
     let dev_stream = DevStream::new(&dbg, conf.clone(), thread_pool.scheduler());
     let (loc, rem) = Link::split(&dbg);
-    let req: Request<QueryId> = Request::new(0, QueryId::DeviceStream, Cot::Act, Content::Json, Query::Empty); // json!({}).as_object().unwrap().to_owned());
+    let req: Frame<OperationId> = Frame::new(0, OperationId::DeviceStream, Cot::Act, Content::Json, vec![]);
     dev_stream.eval((req, Some(rem))).unwrap();
     let mut results = HashMap::new();
     loop {
-        match loc.recv_timeout::<Event<u8>>(Duration::from_millis(300)) {
+        match loc.recv_timeout::<Frame<u8>>(Duration::from_millis(300)) {
             Ok(event) => match event {
                 Some(event) => {
                     log::debug!("{dbg} | event {:?}", event);
                     log::trace!("{dbg} | event.id {}", event.id);
-                    log::trace!("{dbg} | event.bytes {:?}", String::from_utf8_lossy(&event.bytes));
+                    log::debug!("{dbg} | event.bytes {:?}", String::from_utf8_lossy(&event.bytes));
                     match serde_json::from_slice::<Device>(&event.bytes) {
                         Ok(dev) => {
                             log::trace!("dev: {}", dev.id);
@@ -81,7 +81,7 @@ fn eval() {
         }
         if results.len() >= 3 { break };
     }
-    EvalEx::<(Request<QueryId>, Option<Link>), EvalResult<QueryId>>::exit(&dev_stream);
+    EvalEx::<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>>::exit(&dev_stream);
     dev_stream.wait().unwrap();
     test_duration.exit();
 }

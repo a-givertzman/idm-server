@@ -3,9 +3,9 @@ use sal_core::{dbg::Dbg, error::Error};
 use sal_sync::{sync::{Handles, Owner}, thread_pool::Scheduler};
 use crate::{
     domain::{EvalEx, Hub, Link},
-    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, QueryId, Reply, SizedField, Terminator},
+    server::{ConnectionConf, Content, Cot, EvalResult, Field, FieldConf, FieldId, FindField, FixedField, Message, OperationId, Reply, SizedField, Terminator},
 };
-use super::{Event, Response};
+use super::{Frame, Response};
 
 ///
 /// The [Connection] of the `Server`
@@ -14,7 +14,7 @@ pub struct Connection {
     conf: ConnectionConf,
     stream: Owner<TcpStream>,
     scheduler: Scheduler,
-    ctx: Owner<Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send>>,
+    ctx: Owner<Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send>>,
     handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
@@ -28,7 +28,7 @@ impl Connection {
         conf: ConnectionConf,
         stream: TcpStream,
         scheduler: Scheduler,
-        ctx: Box<dyn EvalEx<(Event<QueryId>, Option<Link>), EvalResult<QueryId>> + Send + 'static>,
+        ctx: Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send + 'static>,
     ) -> Self {
         let dbg = Dbg::new(parent.into(), "Connection");
         Self {
@@ -43,7 +43,7 @@ impl Connection {
     }
     ///
     /// Setups TCP Message
-    fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), QueryId), u32), Vec<u8>> {
+    fn tcp_message(dbg: &Dbg) -> Message<((((((((), ()), ()), FieldId), Content), Cot), OperationId), u32), Vec<u8>> {
         const SYN: u8 = 0x22;
         Message::new(
             dbg, // Start |  Id   | Kind | Cot  |  Size  | Data
@@ -75,7 +75,7 @@ impl Connection {
                         dbg,
                         4,
                         |dbg, bytes| {
-                            match QueryId::from_be_bytes(bytes) {
+                            match OperationId::from_be_bytes(bytes) {
                                 Ok(query) => Ok(query),
                                 Err(err) => Err(Error::new(dbg, "Id::from_bytes").pass_with(format!("Can't parse 'Query' u32 filed"), err)),
                             }
@@ -160,17 +160,17 @@ impl Connection {
                     Ok(len) => {
                         match message.parse(buf[..len].to_owned()) {
                             Ok(((((((_, FieldId(event_id)), content), cot), query_id), _), bytes)) => {
-                                let response = match ctx.eval((Event::new(event_id, query_id, cot, content, bytes), Some(hub.link()))) {
+                                let response = match ctx.eval((Frame::new(event_id, query_id, cot, content, bytes), Some(hub.link()))) {
                                     Ok(response) => response,
                                     Err(err) => Some(Response {
                                         event_id,
-                                        query_id,
+                                        operation_id: query_id,
                                         cot: cot.reply_err(),
                                         reply: Reply::error(error.pass(err).to_string()),
                                     }),
                                 };
                                 if let Some(response) = response {
-                                    if let Err(err) = link.send(Event::from(&dbg, response)) {
+                                    if let Err(err) = link.send(Frame::from(&dbg, response)) {
                                         log::warn!("{dbg}.run | Can't send reply: {:?}", err);
                                     }
                                 }
@@ -209,7 +209,7 @@ impl Connection {
         let error = Error::new(&dbg, "send");
         let stream = stream.try_clone().map_err(|err| error.pass_with(format!("Can't clone stream"), err.to_string()))?;
         let exit = self.exit.clone();
-        let handle = hub.listen::<Event<QueryId>, Option<()>>(self.scheduler.clone(), move |event: Event<QueryId>, _| {
+        let handle = hub.listen::<Frame<OperationId>, Option<()>>(self.scheduler.clone(), move |event: Frame<OperationId>, _| {
             let mut w_stream = BufWriter::new(&stream);
             let mut message = Self::tcp_message(&dbg);
             // let bytes = message.build(&event.bytes, event.msg_id);
@@ -225,7 +225,7 @@ impl Connection {
                 Field::U32(event.id),
                 Field::Byte(event.content.into()),
                 Field::Byte(event.cot as u8),
-                Field::U32(event.query_id as u32),
+                Field::U32(event.operation_id as u32),
                 Field::U32(event.bytes.len() as u32),
                 Field::Bytes(event.bytes),
             ]);

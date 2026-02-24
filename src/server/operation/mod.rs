@@ -1,7 +1,7 @@
-mod query_id;
+mod operation_id;
 mod query;
 
-pub(crate) use query_id::*;
+pub(crate) use operation_id::*;
 pub(crate) use query::*;
 
 /// Configuration for the binary encoding / decoding with default parameters

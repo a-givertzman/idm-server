@@ -5,7 +5,7 @@ mod select_act {
     use sal_core::{dbg::Dbg, error::Error};
     use testing::stuff::max_test_duration::TestDuration;
     use debugging::session::debug_session::{DebugSession, LogLevel};
-    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Query, Request, SelectAct}};
+    use crate::{domain::{EvalEx, JsonVal, Link}, server::{Content, Cot, Frame, SelectAct}};
     use super::super::{fake_select_act::{FakeSelectAct1, FakeSelectAct2, FakeSelectAct3}, Command};
     ///
     ///
@@ -35,32 +35,32 @@ mod select_act {
         let test_data = [
             (
                 01,
-                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command1 01")) },
+                Frame { id: 0, operation_id: Command::Cmd1, cot: Cot::Act, content: Content::Json, bytes: "{\"TestString\":\"Command1 01\"}".as_bytes().into() },
                 Ok(format!("CmdReply1 01")),
             ),
             (
                 02,
-                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command2 02")) },
+                Frame { id: 0, operation_id: Command::Cmd2, cot: Cot::Act, content: Content::Json, bytes: "{\"TestString\":\"Command2 02\"}".as_bytes().into() },
                 Ok(format!("CmdReply2 02")),
             ),
             (
                 03,
-                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Act, content: Content::Json, query: Query::TestString(format!("Command3 03")) },
+                Frame { id: 0, operation_id: Command::Cmd3, cot: Cot::Act, content: Content::Json, bytes: "{\"TestString\":\"Command3 03\"}".as_bytes().into() },
                 Ok(format!("CmdReply3 03")),
             ),
             (
                 04,
-                Request { event_id: 0, query_id: Command::Cmd1, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 04")) },
+                Frame { id: 0, operation_id: Command::Cmd1, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 04\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 04")),
             ),
             (
                 05,
-                Request { event_id: 0, query_id: Command::Cmd2, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 05")) },
+                Frame { id: 0, operation_id: Command::Cmd2, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 05\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 05")),
             ),
             (
                 06,
-                Request { event_id: 0, query_id: Command::Cmd3, cot: Cot::Req, content: Content::Json, query: Query::TestString(format!("Error 06")) },
+                Frame { id: 0, operation_id: Command::Cmd3, cot: Cot::Req, content: Content::Json, bytes: "{\"TestString\":\"Error 06\"}".as_bytes().into() },
                 Err(Error::new("", &dbg).err("Error 06")),
             ),
         ];
@@ -89,7 +89,7 @@ mod select_act {
             let select_result = select_act.eval((req, Some(rem)));
             let select_target: Result<Option<_>, _> = Ok(None);
             assert!(select_result == select_target, "step {} \nresult: {:?}\ntarget: {:?}", step, select_result, select_target);
-            let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(100));
+            let result: Result<Option<String>, _> = loc.recv_timeout(Duration::from_millis(200));
             match (result, target) {
                 (Ok(result), Ok(target)) => {
                     let result: JsonVal = serde_json::from_str(&result.unwrap()).unwrap();

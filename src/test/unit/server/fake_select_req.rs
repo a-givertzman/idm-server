@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Request, extract}};
+use crate::{domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Frame, extract}};
 
 ///
 /// Fake Req1 handler
@@ -20,12 +20,13 @@ impl FakeSelectReq1 {
 }
 //
 //
-impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for FakeSelectReq1 {
-    fn eval(&self, request: Request<K>) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<Frame<K>, EvalResult<K>> for FakeSelectReq1 {
+    fn eval(&self, frame: Frame<K>) -> EvalResult<K> {
         let error = Error::new("FakeSelectReq1", "eval");
-        let query = extract!(&request.query, Query::TestString).unwrap();
+        let query = frame.operation().map_err(|err| error.pass(err))?;
+        let query = extract!(&query, Query::TestString).unwrap();
         match (self.ctx)(query) {
-            Ok(value) => Ok(Some(request.reply(Reply::TestString(value)))),
+            Ok(value) => Ok(Some(frame.reply(Reply::TestString(value)))),
             Err(err) => Err(error.pass(err.to_string())),
         }
     }
@@ -52,12 +53,13 @@ impl FakeSelectReq2 {
 }
 //
 //
-impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for FakeSelectReq2 {
-    fn eval(&self, request: Request<K>) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<Frame<K>, EvalResult<K>> for FakeSelectReq2 {
+    fn eval(&self, frame: Frame<K>) -> EvalResult<K> {
         let error = Error::new("FakeSelectReq2", "eval");
-        let query = extract!(&request.query, Query::TestString).unwrap();
+        let query = frame.operation().map_err(|err| error.pass(err))?;
+        let query = extract!(&query, Query::TestString).unwrap();
         match (self.ctx)(query) {
-            Ok(value) => Ok(Some(request.reply(Reply::TestString(value)))),
+            Ok(value) => Ok(Some(frame.reply(Reply::TestString(value)))),
             Err(err) => Err(error.pass(err.to_string())),
         }
     }
@@ -84,12 +86,13 @@ impl FakeSelectReq3 {
 }
 //
 //
-impl<K: Debug + Copy> EvalEx<Request<K>, EvalResult<K>> for FakeSelectReq3 {
-    fn eval(&self, request: Request<K>) -> EvalResult<K> {
+impl<K: Debug + Copy> EvalEx<Frame<K>, EvalResult<K>> for FakeSelectReq3 {
+    fn eval(&self, frame: Frame<K>) -> EvalResult<K> {
         let error = Error::new("FakeSelectReq3", "eval");
-        let query = extract!(&request.query, Query::TestString).unwrap();
+        let query = frame.operation().map_err(|err| error.pass(err))?;
+        let query = extract!(&query, Query::TestString).unwrap();
         match (self.ctx)(query) {
-            Ok(value) => Ok(Some(request.reply(Reply::TestString(value)))),
+            Ok(value) => Ok(Some(frame.reply(Reply::TestString(value)))),
             Err(err) => Err(error.pass(err.to_string())),
         }
     }
