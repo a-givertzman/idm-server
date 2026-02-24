@@ -4,35 +4,22 @@
 
 **Структура посылки**:
 
-Field name | Start |  Id   | Kind | Cot  | Operation |  Size  | Data       |
----        |  ---  |  ---  | ---  | ---  | ---       |  ---   | ---        |
-Data type  |  u8   | u32   | u8   | u8   | u32       | u32    | [u8; Size] |
-Value      |  22   | 111   | 02   | 04   | 12        | xxx    | [..., ...] |
+Field name | Start |  Id   | ContentKind | Cot  | OperationId |  Size  | Data       |
+---        |  ---  |  ---  | ---         | ---  | ---         |  ---   | ---        |
+Data type  |  u8   | u32   | u8          | u8   | u32         | u32    | [u8; Size] |
+Value      |  22   | 111   | 02          | 04   | 12          | xxx    | [..., ...] |
 
 - `Start` - Each message starts with SYN (22)
-- `Id` - Message id
-- `Kind` - The `Kind` of the data stored in the `Data` field is 02 - `Bytes`
-- `Cot` - Cause of transmission is 03 - `Cot::Act`
-- `Name` - User name of Message / Event / Request
-- `Size` - The length of the `Data` field - xxx bytes
-- `Data` - Data structured depending on it `Kind`
-- `Kind` of data
-    - 00, Any
+- `Id` - Идентификатор сообщения
+- `ContentKind` - Вид данных в поле `Data`
     - 01, Empty
     - 02, Bytes
-    - 08, Bool
-    - 16, UInt16
-    - 17, UInt32
-    - 18, UInt64
-    - 24, Int16
-    - 25, Int32
-    - 26, Int64
-    - 32, F32
-    - 33, F64
     - 40, String
-    - 48, Timestamp
-    - 49, Duration
-    - .., ...
+    - 42, Json
+- `Cot` - Причина и направление передачи
+- `OperationId` - Идентификатор операции
+- `Size` - Длина поля `Data` в байтых
+- `Data` - Данные
 
 Cot — мета-информация передачи..
 OperationId — идентификатор операции.
@@ -165,7 +152,7 @@ frame.operation<Operation>() -> Result<Operation>
 
 На этом этапе:
 
-* Проверяется соответствие `Operation === frame.operation_id`
+* Проверяется соответствие `Operation::ID == frame.operation_id`
 * Производится десериализация payload
 * Transport больше не участвует
 
