@@ -4,7 +4,7 @@ use sal_core::error::Error;
 /// Identifier of API `Query`'s
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash, bincode::Encode, bincode::Decode)]
 #[repr(u32)]
-pub enum QueryId {
+pub enum OperationId {
     DeviceStream = 16,
     DeviceInfo   = 20,
     DeviceDoc    = 24,
@@ -12,7 +12,7 @@ pub enum QueryId {
 }
 //
 //
-impl QueryId {
+impl OperationId {
     ///
     /// Returns [Query] from `bytes`
     pub fn from_be_bytes(bytes: &[u8]) -> Result<Self, Error> {
@@ -33,7 +33,7 @@ impl QueryId {
 }
 //
 //
-impl Into<u32> for QueryId {
+impl Into<u32> for OperationId {
     fn into(self) -> u32 {
         self as u32
     }

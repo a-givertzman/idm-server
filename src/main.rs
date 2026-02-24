@@ -10,7 +10,7 @@ use sal_core::dbg::Dbg;
 use sal_sync::thread_pool::ThreadPool;
 use server::Server;
 
-use crate::server::{Content, Cot, DevStream, QueryId, SelectAct, SelectContent, SelectCot, SelectDevDoc, SelectDevInfo, SelectReq};
+use crate::server::{Content, Cot, DevStream, OperationId, SelectAct, SelectContent, SelectCot, SelectDevDoc, SelectDevInfo, SelectReq};
 
 ///
 /// Application entry point
@@ -61,7 +61,7 @@ fn main() {
                             (Cot::Act, Box::new(SelectAct::new(
                                 vec![
                                     // Handling incomong command `DeviceStream`
-                                    (QueryId::DeviceStream, Box::new(DevStream::new(
+                                    (OperationId::DeviceStream, Box::new(DevStream::new(
                                         dbg,
                                         conf.server.dev_stream.clone(),
                                         tp.scheduler(),
@@ -71,9 +71,9 @@ fn main() {
                             // Handling incomong messages with Cot::Req by field `req`
                         (Cot::Req, Box::new(SelectReq::new(vec![
                                 // Handling incomong request `DeviceInfo`
-                                (QueryId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
+                                (OperationId::DeviceInfo, Box::new(SelectDevInfo::new("assets/info/"))),
                                 // Handling incomong request `DeviceDoc`
-                                (QueryId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
+                                (OperationId::DeviceDoc, Box::new(SelectDevDoc::new("assets/info/"))),
                             ]))),
                         ]))),
                     ])

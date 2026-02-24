@@ -4,16 +4,16 @@
 //! - `Data` can be encoded using varius data `Kind`, `Size` and payload data
 //! 
 //! - Message format
-//!     Field name | Start |  Id   | Kind | Cot  | Name |  Size  | Data       |
-//!     ---        |  ---  |  ---  | ---  | ---  | ---  |  ---   | ---        |
-//!     Data type  |  u8   | u32   | u8   | u8   | u32  | u32    | [u8; Size] |
-//!     Value      |  22   | 111   | 02   | 04   | 12   | xxx    | [..., ...] |
+//!     Field name | Start |  Id   | Kind | Cot  | Operation |  Size  | Data       |
+//!     ---        |  ---  |  ---  | ---  | ---  | ---       |  ---   | ---        |
+//!     Data type  |  u8   | u32   | u8   | u8   | u32       | u32    | [u8; Size] |
+//!     Value      |  22   | 111   | 02   | 04   | 12        | xxx    | [..., ...] |
 //!     
 //!     - Start - Each message starts with SYN (22)
 //!     - Id - Message id = 111
-//!     - Kind - The `Kind` of the data stored in the `Data` field is 02 - `Bytes`
+//!     - Kind - The content kind. The kind of data stored in the `Data` field is 02 - `Bytes`
 //!     - Cot - Cause of transmission is 03 - `Cot::Act`
-//!     - Name - User name of Message / Event / Request
+//!     - Operation - The operation identifier, query or command
 //!     - Size - The length of the `Data` field - xxx bytes
 //!     - Data - Data structured depending on it `Kind`
 //! 
@@ -51,10 +51,10 @@ pub trait MessageParse<FieldIn, FieldOut, Out> {
 /// Socket [Message] | Parse / Build structured bytes
 /// 
 /// - Message format
-///     Field name | Start |  Id   | Kind | Cot  | Name |  Size  | Data       |
-///     ---        |  ---  |  ---  | ---  | ---  | ---  |  ---   | ---        |
-///     Data type  |  u8   | u32   | u8   | u8   | u32  | u32    | [u8; Size] |
-///     Value      |  22   | 111   | 02   | 04   | 12   | xxx    | [..., ...] |
+///     Field name | Start |  Id   | Kind | Cot  | Operation |  Size  | Data       |
+///     ---        |  ---  |  ---  | ---  | ---  | ---       |  ---   | ---        |
+///     Data type  |  u8   | u32   | u8   | u8   | u32       | u32    | [u8; Size] |
+///     Value      |  22   | 111   | 02   | 04   | 12        | xxx    | [..., ...] |
 pub struct Message<FieldIn, FieldOut> {
     build: Vec<FieldConf>,
     parse: Box<dyn MessageParse<FieldIn, FieldOut, Bytes>>,
