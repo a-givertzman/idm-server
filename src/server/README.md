@@ -14,8 +14,8 @@ Value      |  22   | 111   | 02          | 04   | 12          | xxx    | [..., .
 - `ContentKind` - Вид данных в поле `Data`
     - 01, Empty
     - 02, Bytes
+    - 38, Json
     - 40, String
-    - 42, Json
 - `Cot` - Причина и направление передачи
 - `OperationId` - Идентификатор операции
 - `Size` - Длина поля `Data` в байтых
