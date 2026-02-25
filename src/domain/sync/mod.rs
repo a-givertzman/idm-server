@@ -1,6 +1,6 @@
 mod link;
 mod hub;
-mod link_sender;
+mod link_send;
 
 use std::time::Duration;
 
@@ -9,6 +9,6 @@ use std::time::Duration;
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(10);
 
 
-pub use link_sender::LinkSend;
+pub use link_send::LinkSend;
 pub use hub::Hub;
 pub use link::Link;

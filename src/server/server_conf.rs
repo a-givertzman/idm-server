@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::ConnectionConf;
+use super::{ConnectionConf, DevStreamConf};
 
 ///
 /// The `Server` configuration
@@ -7,4 +7,6 @@ use super::ConnectionConf;
 pub struct ServerConf {
     pub address: String,
     pub connection: ConnectionConf,
+    #[serde(rename = "dev-stream")]
+    pub dev_stream: DevStreamConf,
 }

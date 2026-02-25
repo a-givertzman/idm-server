@@ -2,8 +2,8 @@ use std::{fmt::Debug, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duratio
 use bincode::{Decode, Encode};
 use sal_sync::{services::entity::{Name, PointTxId}, thread_pool::{JoinHandle, Scheduler}};
 use crate::domain::Error;
-
 use super::{link::Link, LinkSend};
+
 ///
 /// Combines multiple links
 /// - Receives incomming events (requests) in the `listen` closure
@@ -22,7 +22,7 @@ impl Hub {
     ///
     /// Returns [Hub] new instance
     /// - `exit` - exit signal for `recv_query` method
-    pub fn new(parent: impl Into<String>, exit: Option<Arc<AtomicBool>>,) -> Self {
+    pub fn new(parent: impl Into<String>, exit: Option<Arc<AtomicBool>>) -> Self {
         let name = Name::new(parent, "Hub");
         Self {
             txid: PointTxId::from_str(&name.join()),
@@ -62,7 +62,7 @@ impl Hub {
     pub fn listen<In, Out>(
         &self,
         scheduler: Scheduler,
-        mut op: impl FnMut(In, LinkSend) -> Option<Out> + Send + 'static,
+        op: impl Fn(In, LinkSend) -> Option<Out> + Send + 'static,
     ) -> Result<JoinHandle<()>, Error> 
     where 
         In: Decode<()> + Debug,

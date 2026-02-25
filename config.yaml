@@ -1,5 +1,20 @@
 server:
-  address: 0.0.0.0:3838
-  connection:
+    address: 0.0.0.0:3838
+    connection:
+        timeout: 100  # ms
+    dev-stream:
+        devices:
+            01:
+                value: 10.0
+                deviation: 3.0
+                interval: 200   # ms
+            02:
+                value: 20.0
+                deviation: 3.0
+                interval: 300   # ms
+            03:
+                value: 30.0
+                deviation: 3.0
+                interval: 400   # ms
 api:
-  address: 0.0.0.0:3839
+    address: 0.0.0.0:3839

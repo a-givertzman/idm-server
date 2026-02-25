@@ -1,20 +1,20 @@
 use std::{net::TcpListener, sync::{atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
-use coco::Stack;
 use sal_core::{dbg::Dbg, error::Error};
-use sal_sync::thread_pool::{Scheduler, JoinHandle};
-use crate::{device_info::DeviceInfo, server::{Connection, ServerConf}};
-use super::{select_cot::SelectCot, select_req::SelectReq, Command, Cot, Request, SelectAct, SelectDevDoc, SelectDevInfo, SelectDevStream};
+use sal_sync::{collections::FxDashMap, sync::{Handles, Owner}, thread_pool::Scheduler};
+use crate::{conf::Conf, domain::{EvalEx, Link}, server::{Connection, EvalResult, Frame}};
+use super::OperationId;
 ///
 /// The Server
 /// - Setups socket server at specified address
 /// - Spawnes `Connection` on each incoming requiest
 pub struct Server {
     dbg: Dbg,
-    conf: ServerConf,
+    conf: Conf,
     scheduler: Scheduler,
-    connections: Arc<Stack<Connection>>,
-    listener: Arc<Stack<TcpListener>>,
-    handle: Stack<JoinHandle<()>>,
+    ctx: Arc<Box<dyn Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send > + Send + Sync>>,
+    connections: Arc<FxDashMap<String, Connection>>,
+    listener: Arc<Owner<Arc<TcpListener>>>,
+    handles: Handles<()>,
     exit: Arc<AtomicBool>,
 }
 //
@@ -22,15 +22,22 @@ pub struct Server {
 impl Server {
     ///
     /// Returns [Server] new instance
-    pub fn new(parent: impl Into<String>, conf: ServerConf, scheduler: Scheduler) -> Self {
+    pub fn new(
+        parent: impl Into<String>,
+        conf: Conf,
+        scheduler: Scheduler,
+        ctx: impl Fn(&Dbg, &Conf) -> Box<dyn EvalEx<(Frame<OperationId>, Option<Link>), EvalResult<OperationId>> + Send> + Send + Sync + 'static,
+    ) -> Self {
+        let dbg = Dbg::new(parent.into(), "Server");
         Self {
-            dbg: Dbg::new(parent.into(), "Server"),
             conf,
             scheduler,
-            connections: Arc::new(Stack::new()),
-            listener: Arc::new(Stack::new()),
-            handle: Stack::new(),
+            ctx: Arc::new(Box::new(ctx)),
+            connections: Arc::new(FxDashMap::default()),
+            listener: Arc::new(Owner::empty()),
+            handles: Handles::new(&dbg),
             exit: Arc::new(AtomicBool::new(false)),
+            dbg,
         }
     }
     ///
@@ -39,53 +46,42 @@ impl Server {
         let dbg = self.dbg.clone();
         let conf = self.conf.clone();
         let scheduler = self.scheduler.clone();
+        let ctx = self.ctx.clone();
         let connections = self.connections.clone();
-        let self_listener = self.listener.clone();
+        let listeners = self.listener.clone();
         let exit = self.exit.clone();
         let handle = self.scheduler.spawn(move || {
             'main: loop {
-                match TcpListener::bind(conf.address.clone()) {
+                match TcpListener::bind(conf.server.address.clone()) {
                     Ok(listener) => {
-                        self_listener.push(listener.try_clone().unwrap());
+                        let listener= Arc::new(listener);
+                        listeners.replace(listener.clone());
                         for stream in listener.incoming() {
                             match stream {
                                 Ok(stream) => {
+                                    let client = stream.peer_addr().map(|a| a.to_string()).unwrap_or(connections.len().to_string());
                                     let conn = Connection::new(
                                         &dbg,
-                                        conf.connection.clone(),
+                                        conf.server.connection.clone(),
                                         stream,
                                         scheduler.clone(),
-                                        //
-                                        // Handling incomong messages by Cot
-                                        SelectCot::new(
-                                            vec![
-                                                // Handling incomong messages with `Cot::Act` by field `cmd`
-                                                (Cot::Act, Box::new(SelectAct::new(
-                                                    vec![
-                                                        // Handling incomong command `DeviceStream`
-                                                        (Command::DeviceStream, Box::new(SelectDevStream::new())),
-                                                    ]
-                                                ))),
-                                                // Handling incomong messages with Cot::Req by field `req`
-                                                (Cot::Req, Box::new(SelectReq::new(
-                                                    vec![
-                                                        // Handling incomong request `DeviceInfo`
-                                                        (Request::DeviceInfo, Box::new(SelectDevInfo::new(
-                                                            DeviceInfo::from_path("assets/info/"),
-                                                        ))),
-                                                        // Handling incomong request `DeviceDoc`
-                                                        (Request::DeviceDoc, Box::new(SelectDevDoc::new())),
-                                                    ]
-                                                ))),
-                                            ],
-                                        ),
+                                        (ctx)(&dbg, &conf),
                                     );
                                     match conn.run() {
-                                        Ok(_) => connections.push(conn),
+                                        Ok(_) => _ = connections.insert(client, conn),
                                         Err(err) => log::warn!("{dbg}.run | Spawn connection error: {:?}", err),
                                     }
+                                    let keys: Vec<String> = connections.iter().map(|e| e.key().clone()).collect();
+                                    for key in keys {
+                                        if let Some(con) =  connections.get(&key) {
+                                            if con.value().is_finished() {
+                                                con.exit();
+                                                connections.remove(&key);
+                                            }
+                                        }
+                                    }
                                 }
-                                Err(err) => log::warn!("{dbg}.run | Get TcpStream error: {:?}", err),
+                                Err(err) => log::warn!("{dbg}.run | Can't get incoming TcpStream, error: {:?}", err),
                             }
                             if exit.load(Ordering::SeqCst) {
                                 break 'main;
@@ -96,56 +92,40 @@ impl Server {
                 }
                 std::thread::sleep(Duration::from_secs(1));
                 if exit.load(Ordering::SeqCst) {
+                    for con in connections.iter() {
+                        con.value().exit();
+                    }
                     break 'main;
                 }
             }
             Ok(())
-        });
-        let error = Error::new(&self.dbg, "run");
-        match handle {
-            Ok(handle) => {
-                self.handle.push(handle);
-                Ok(())
-            }
-            Err(err) => Err(error.pass(err)),
-        }
+        }).map_err(|err| Error::new(&self.dbg, "run").pass(err))?;
+        self.handles.push(handle);
+        Ok(())
     }
     ///
     /// Returns when internal thread's will finished
     #[allow(unused)]
     pub fn wait(&self) -> Result<(), Error> {
-        let error = Error::new(&self.dbg, "wait");
-        while !self.connections.is_empty() {
-            if let Some(conn) = self.connections.pop() {
-                if let Err(err) = conn.wait() {
-                    log::warn!("{}.wait | Bind TcpServer error: {:?}", self.dbg, err);
-                }
+        for conn in self.connections.iter() {
+            if let Err(err) = conn.wait() {
+                log::warn!("{}.wait | Wait for TcpServer '{}' error: {:?}", self.dbg, conn.key(), err);
             }
         }
-        match self.handle.pop() {
-            Some(handle) => handle.join().map_err(|err| error.pass(format!("{:?}", err))),
-            None => Err(error.err("No handle")),
-        }
+        self.handles.wait()
     }
     ///
     /// Sends exit signal to main tread
     #[allow(unused)]
     pub fn exit(&self) {
-        if let Some(listener) = self.listener.pop() {
+        self.exit.store(true, Ordering::SeqCst);
+        if let Some(listener) = self.listener.take() {
             if let Err(err) = listener.set_nonblocking(true) {
                 log::warn!("{}.wait | TcpListener set_nonblocking error: {:?}", self.dbg, err);
             }
         }
-        let mut connections = vec![];
-        while !self.connections.is_empty() {
-            if let Some(conn) = self.connections.pop() {
-                connections.push(conn);
-            }
-        }
-        for conn in connections {
+        for conn in self.connections.iter() {
             conn.exit();
-            self.connections.push(conn);
         }
-        self.exit.store(true, Ordering::SeqCst);
     }
 }

@@ -1,4 +1,27 @@
+добавь
+- активация DevStream, комманда без ответа
+- DeviceInfo, запрос с ответом
+- DeviceDoc, запрос с ответом
+сюда
 # Описание интерфейса между `Клиент`ом и `Сервер`ом
+
+## Команда `DevStream`
+
+```json
+    {
+        "cot": "Act",
+        "name": "DeviceStream",
+        "content": {
+            "dev-id": 111
+        }
+    }
+```
+
+## DeviceInfo, запрос с ответом
+
+## DeviceDoc, запрос с ответом
+
+
 
 ## Запрос `DeviceInfo`
 
@@ -7,9 +30,9 @@
 ```json
     {
         "cot": "Req",
-        "req": "DeviceInfo"
-        "data": {
-            "id": 111
+        "name": "DeviceInfo",
+        "content": {
+            "dev-id": 111
         }
     }
 ```
@@ -19,7 +42,8 @@
 ```json
     {
         "cot": "RecCon",
-        "data": {
+        "name": "DeviceInfo",
+        "content": {
             // Device Info data
         },
     }
@@ -43,9 +67,9 @@
 ```json
     {
         "cot": "Req",
-        "req": "DeviceDoc",
-        "data": {
-            "id": 111
+        "name": "DeviceDoc",
+        "content": {
+            "dev-id": 111
         }
     }
 ```
@@ -55,7 +79,8 @@
 ```json
     {
         "cot": "RecCon",
-        "data": {
+        "name": "DeviceDoc",
+        "content": {
             // Device Doc data
         },
     }

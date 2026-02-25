@@ -1,11 +1,6 @@
 use std::{fs::OpenOptions, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use crate::{domain::{Error, Eval}, server::JsonCtx};
-///
-/// Wrapper for the [DeviceInfo] id of type u32
-#[derive(Debug, PartialEq)]
-pub struct DevId(pub u32);
+use crate::{device::DevId, domain::{Error, EvalEx}};
 ///
 /// Reply to `DeviceInfo` request
 /// - Provides basic overview info by device
@@ -27,7 +22,7 @@ pub struct DevId(pub u32);
 pub struct DeviceInfo {
     #[serde(skip)]
     path: PathBuf,
-    pub id: u32,
+    pub id: String,
     pub manufacturer: String,
     pub vendor: String,
     #[serde(rename="order-code")]
@@ -44,38 +39,6 @@ pub struct DeviceInfo {
 //
 //
 impl DeviceInfo {
-    ///
-    /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
-    pub fn new(
-        id: u32,
-        manufacturer: String,
-        vendor: String,
-        order_code: String,
-        model: String,
-        serial: String,
-        name: String,
-        description: String,
-        width: String,
-        height: String,
-        depth: String,
-        weight: String,
-    ) -> Self {
-        Self {
-            path: PathBuf::new(),
-            id,
-            manufacturer,
-            vendor,
-            order_code,
-            model,
-            serial,
-            name,
-            description,
-            width,
-            height,
-            depth,
-            weight,
-        }
-    }
     ///
     /// Returns [DeviceInfo] ready to be read using `eval` method from the specified `path` and passed `id`
     pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
@@ -118,13 +81,20 @@ impl DeviceInfo {
 }
 //
 //
-impl Eval<DevId, Result<JsonCtx, Error>> for DeviceInfo {
-    fn eval(&mut self, id: DevId) -> Result<JsonCtx, Error> {
+impl EvalEx<DevId, Result<Self, Error>> for DeviceInfo {
+    //
+    //
+    fn eval(&self, id: DevId) -> Result<Self, Error> {
         let error = Error::new("DeviceInfo", "eval");
         let path = self.path.join(format!("{}.json", id.0));
         match Self::read(path) {
-            Ok(value) => Ok(JsonCtx::new(id, json!(value))),
+            Ok(value) => Ok(value),
             Err(err) => Err(error.pass(err)),
         }
+    }
+    //
+    //
+    fn exit(&self) {
+        // Halt continuous operations here
     }
 }

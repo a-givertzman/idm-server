@@ -1,44 +1,42 @@
-use crate::{device_info::DevId, domain::{Error, Eval}};
-use super::{request::DeviceInfoRequest, JsonCtx, MapCtx};
+use std::{fmt::Debug, path::{Path, PathBuf}};
+use crate::{device::{DevId, DeviceInfo}, domain::{Error, EvalEx}, server::{EvalResult, Query, Reply, Frame, extract}};
 
 ///
 /// Extracting incoming messages as [DeviceInfoRequest]
 /// - Forwarding requested id to the specified `ctx`
 /// - Returns [DeviceInfo]
 pub(crate) struct SelectDevInfo {
-    ctx: Box<dyn Eval<DevId, Result<JsonCtx, Error>> + Send>,
+    path: PathBuf,
 }
 //
 //
 impl SelectDevInfo {
     ///
     /// Returns [SortByX] new instance
-    pub fn new(ctx: impl Eval<DevId, Result<JsonCtx, Error>> + Send + 'static) -> Self {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self {
-            ctx: Box::new(ctx),
+            path: path.as_ref().to_owned(),
         }
     }
 }
 //
 //
-impl Eval<MapCtx, Result<JsonCtx, Error>> for SelectDevInfo {
-    fn eval(&mut self, input: MapCtx) -> Result<JsonCtx, Error> {
+impl<K: Debug + Copy> EvalEx<Frame<K>, EvalResult<K>> for SelectDevInfo {
+    //
+    fn eval(&self, frame: Frame<K>) -> EvalResult<K> {
         let error = Error::new("SelectDevInfo", "eval");
-        match input.map.get("data") {
-            Some(cot) => {
-                match serde_json::from_value(cot.to_owned()) {
-                    Ok(data) => {
-                        let req: DeviceInfoRequest = data;
-                        match self.ctx.eval(DevId(req.id)) {
-                            Ok(value) => Ok(value),
-                            Err(err) => Err(error.pass(err.to_string())),
-                        }
-                    }
-                    Err(err) => Err(error.pass(err.to_string())),
-                }
-            }
-            None => Err(error.err(format!("data field is not found in {:#?}", input.map))),
+        let query = frame.operation().map_err(|err| error.pass(err))?;
+        let query = extract!(&query, Query::DeviceInfo)
+            .map_err(|_| error.err(format!("Query::DeviceInfo expected, but found {:?}", frame.operation_id)))?;
+        match DeviceInfo::from_path(&self.path).eval(DevId(query.dev_id.clone())) {
+            Ok(data) => Ok(Some(frame.reply(Reply::DeviceInfo(data)))),
+            Err(err) => Err(error.pass(err)),
         }
+    }
+    ///
+    /// Halts hanbler
+    fn exit(&self) {
+        // Halt continuous operations here
     }
 }
 //
